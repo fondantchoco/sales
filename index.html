@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FONDANT CHOCO - سجل تسجيل ومتابعة المبيعات</title>
+    <!-- مكتبات Excel والطباعة -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #eef2f5; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; display: flex; justify-content: center; color: #111; flex-direction: column; align-items: center; }
+        .sales-system { max-width: 1000px; width: 100%; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
+        h2 { text-align: center; margin-bottom: 5px; color: #222; font-family: Arial, sans-serif; }
+        .company-subtitle { text-align: center; font-size: 15px; font-weight: bold; color: #555; margin-bottom: 20px; }
+
+        /* شريط التنبيه بالنسخة الاحتياطية */
+        #backupReminderBanner {
+            width: 100%; max-width: 1000px; background: #ff9800; color: #fff; padding: 10px 15px;
+            border-radius: 6px; font-weight: bold; font-size: 14px; margin-bottom: 15px;
+            display: none; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        /* شريط التحكم العلوي والفرز */
+        .header-controls {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;
+        }
+        .top-actions-bar {
+            display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .sort-box {
+            display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 5px 10px; border-radius: 6px; border: 1px solid #ddd;
+        }
+        .sort-box label { font-size: 12px; font-weight: bold; color: #444; }
+
+        /* إزالة أسهم الأرقام */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* نموذج الإدخال */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 140px 130px 1fr 130px 130px 110px;
+            gap: 10px;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; position: relative; }
+        .form-group label { font-size: 12px; font-weight: bold; color: #444; }
+        
+        .form-control {
+            padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+            font-size: 14px; font-weight: bold; outline: none; text-align: center; background: #fff;
+        }
+        .form-control:focus { border-color: #28a745; }
+
+        #customerInput { text-align: right; text-transform: capitalize; }
+
+        /* الأزرار */
+        .btn { padding: 8px 14px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-primary { background: #28a745; color: white; height: 38px; margin-top: 20px; }
+        .btn-primary:hover { background: #218838; }
+        .btn-warning { background: #007bff; color: white; height: 38px; margin-top: 20px; }
+        .btn-warning:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; color: white; padding: 4px 8px; font-size: 11px; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-edit { background: #ffc107; color: #111; padding: 4px 8px; font-size: 11px; }
+        .btn-edit:hover { background: #e0a800; }
+        .btn-success { background: #20c997; color: white; }
+        .btn-success:hover { background: #17a589; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-excel-import { background: #17a2b8; color: white; }
+        .btn-excel-import:hover { background: #138496; }
+        .btn-statement { background: #6f42c1; color: white; }
+        .btn-statement:hover { background: #5a32a3; }
+
+        /* جدول العرض الأساسي */
+        .sales-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        .sales-table th, .sales-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .sales-table th { background: #343a40; color: white; font-weight: bold; }
+        .sales-table tr:nth-child(even) { background: #f9f9f9; }
+
+        /* قائمة البحث التلقائي للعملاء */
+        .autocomplete-list { 
+            position: absolute; top: 100%; right: 0; left: 0; 
+            background: #e3f2fd; border: 1.5px solid #90caf9; 
+            max-height: 240px; overflow-y: auto; z-index: 1000; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; text-align: right; border-radius: 6px;
+        }
+        .autocomplete-item { 
+            padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #bbdefb; 
+            font-size: 20px; font-weight: bold; color: #0d47a1;
+        }
+        .autocomplete-item:hover { background: #bbdefb; }
+
+        /* ملخص الإجماليات */
+        .summary-box { display: flex; justify-content: flex-end; gap: 20px; margin-top: 15px; font-size: 16px; font-weight: bold; }
+        .summary-item { background: #e9ecef; padding: 8px 15px; border-radius: 5px; border: 1px solid #ced4da; }
+        .summary-val { color: #d32f2f; }
+
+        /* مودال كشف الحساب الاحترافي */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 3000; padding: 10px; }
+        .modal-content { background: white; width: 100%; max-width: 850px; max-height: 90vh; border-radius: 8px; padding: 20px; overflow-y: auto; text-align: right; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 8px; margin-bottom: 12px; }
+        
+        /* تنسيق طباعة كشف الحساب المدمج وتقليل ارتفاع الصفوف */
+        .statement-print-area { background: #fff; padding: 15px; border: 1px solid #eee; direction: ltr; text-align: left; font-family: 'Segoe UI', Arial, sans-serif; }
+        .st-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #222; padding-bottom: 8px; margin-bottom: 10px; }
+        .st-company-info h3 { font-size: 20px; color: #111; margin-bottom: 2px; font-weight: 800; }
+        .st-company-info p { font-size: 12px; color: #555; }
+        .st-logo-img { max-height: 50px; max-width: 120px; object-fit: contain; }
+        
+        .st-title-section { text-align: center; margin: 8px 0 12px 0; }
+        .st-client-name { font-size: 22px; font-weight: 900; color: #0d47a1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+        .st-statement-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 3px; text-transform: uppercase; }
+        .st-period-subtitle { font-size: 13px; font-weight: 600; color: #555; }
+
+        .st-meta { display: flex; justify-content: space-between; background: #f8f9fa; padding: 6px 12px; border-radius: 4px; font-size: 12px; margin-bottom: 10px; font-weight: bold; border: 1px solid #e9ecef; }
+        
+        .filters-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: flex-end; }
+
+        .en-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px; }
+        .en-table th, .en-table td { border: 1px solid #aaa; padding: 3px 6px; text-align: center; line-height: 1.2; }
+        .en-table th { background: #222; color: #fff; font-weight: bold; padding: 5px 6px; }
+        .en-table tr:nth-child(even) { background: #f9f9f9; }
+    </style>
+</head>
+<body>
+
+<!-- شريط التنبيه بالنسخة الاحتياطية -->
+<div id="backupReminderBanner">
+    <span>⚠️ تنبيه: مر أكثر من 30 دقيقة دون أخذ نسخة احتياطية لبيانات المبيعات!</span>
+    <div style="display: flex; gap: 8px;">
+        <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px;" onclick="exportJsonBackup()">أخذ نسخة الآن</button>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px; background: #555;" onclick="dismissBackupReminder()">تجاهل</button>
+    </div>
+</div>
+
+<div class="sales-system">
+    <h2>FONDANT CHOCO</h2>
+    <div class="company-subtitle">نظام تسجيل ومتابعة مبيعات العملاء</div>
+
+    <!-- أزرار التحكم العلوية والفرز -->
+    <div class="header-controls">
+        <div class="top-actions-bar">
+            <button class="btn btn-success" onclick="exportToExcel()">📊 تصدير Excel</button>
+            <button class="btn btn-statement" onclick="openStatementModal()">📄 Statement of Account (English)</button>
+            <button class="btn btn-secondary" onclick="exportJsonBackup()">💾 نسخة الاحتياطية</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('jsonFileInput').click()">📂 استعادة</button>
+            <input type="file" id="jsonFileInput" style="display: none;" accept=".json" onchange="importJsonBackup(event)">
+            
+            <button class="btn btn-excel-import" onclick="document.getElementById('excelFileInput').click()">📥 استيراد إكسل</button>
+            <input type="file" id="excelFileInput" style="display: none;" accept=".xlsx, .xlsm" onchange="importOldExcelData(event)">
+        </div>
+
+        <div class="sort-box">
+            <label>فرز حسب:</label>
+            <select id="sortSelect" class="form-control" style="padding: 4px 8px; font-size: 13px;" onchange="renderSalesTable()">
+                <option value="default">الافتراضي (حسب الإضافة)</option>
+                <option value="date_desc">التاريخ: الأحدث أولاً (تنازلي)</option>
+                <option value="date_asc">التاريخ: الأقدم أولاً (تصاعدي)</option>
+                <option value="inv_asc">رقم الفاتورة: تصاعدي</option>
+                <option value="inv_desc">رقم الفاتورة: تنازلي</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- نموذج إدخال المبيعات -->
+    <div class="form-grid">
+        <div class="form-group">
+            <label>التاريخ:</label>
+            <input type="date" id="saleDate" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>رقم الفاتورة (غير مكرر/تخطي):</label>
+            <input type="number" id="invoiceNo" class="form-control" placeholder="اتركه فارغاً">
+        </div>
+        <div class="form-group">
+            <label>اسم العميل (بحث بالحرف):</label>
+            <input type="text" id="customerInput" class="form-control" placeholder="اكتب اسم العميل...">
+            <div id="customerList" class="autocomplete-list"></div>
+        </div>
+        <div class="form-group">
+            <label>المبلغ (KD):</label>
+            <input type="number" id="saleAmount" class="form-control" step="0.001" placeholder="0.000">
+        </div>
+        <div class="form-group">
+            <label>المرتجع (KD):</label>
+            <input type="number" id="returnAmount" class="form-control" step="0.001" placeholder="0.000">
+        </div>
+        <button type="button" id="submitBtn" class="btn btn-primary" onclick="addSaleRecord()">➕ إضافة</button>
+    </div>
+
+    <!-- جدول عرض المبيعات -->
+    <table class="sales-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>التاريخ</th>
+                <th>رقم الفاتورة</th>
+                <th>اسم العميل</th>
+                <th>المبلغ (KD)</th>
+                <th>المرتجع (KD)</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody id="salesTableBody"></tbody>
+    </table>
+
+    <!-- ملخص المبيعات -->
+    <div class="summary-box">
+        <div class="summary-item">إجمالي المبيعات: <span class="summary-val" id="totalSales">0.000 KD</span></div>
+        <div class="summary-item">إجمالي المرتجعات: <span class="summary-val" id="totalReturns" style="color:#007bff;">0.000 KD</span></div>
+        <div class="summary-item">الصافي النهائي: <span class="summary-val" id="netTotal">0.000 KD</span></div>
+    </div>
+</div>
+
+<!-- مودال نافذة كشف الحساب الاحترافي باللغة الإنجليزية -->
+<div class="modal-overlay" id="statementModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Statement of Account - FONDANT CHOCO</h3>
+            <button class="btn btn-danger" onclick="closeStatementModal()">Close ✖</button>
+        </div>
+
+        <!-- خيارات فترة الكشف والعميل -->
+        <div class="filters-row no-print">
+            <div class="form-group">
+                <label>From Date:</label>
+                <input type="date" id="stFromDate" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>To Date:</label>
+                <input type="date" id="stToDate" class="form-control">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Select Customer / Branch:</label>
+                <select id="stCustomerSelect" class="form-control" style="text-align: left; direction: ltr;">
+                    <option value="ALL">-- ALL BRANCHES / CUSTOMERS --</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="generateStatementPreview()">View Statement 👁️</button>
+            <button class="btn btn-success" onclick="printStatementPDF()">🖨️ Print / Save PDF</button>
+        </div>
+
+        <!-- معاينة كشف الحساب بالكامل باللغة الإنجليزية -->
+        <div class="statement-print-area" id="statementPrintArea">
+            <div class="st-header">
+                <div class="st-company-info">
+                    <h3>FONDANT CHOCO</h3>
+                    <p>High Quality Food & Confectionery Supplies</p>
+                </div>
+                <div>
+                    <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Fondant Choco Logo" class="st-logo-img">
+                </div>
+            </div>
+
+            <div class="st-title-section">
+                <div class="st-client-name">BAB AL-KHAIR CO.</div>
+                <div class="st-statement-title">STATEMENT OF ACCOUNT</div>
+                <div class="st-period-subtitle" id="stPeriodText">For the Period From -- To --</div>
+            </div>
+
+            <div class="st-meta">
+                <span id="stCustomerLabel">Customer Branch: All Branches</span>
+                <span id="stDatePrint">Issue Date: </span>
+            </div>
+
+            <table class="en-table" style="margin-bottom: 12px;">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">#</th>
+                        <th style="width: 110px;">Date</th>
+                        <th style="width: 110px;">Invoice No.</th>
+                        <th>Customer / Branch</th>
+                        <th style="width: 140px;">Invoice Amount (KD)</th>
+                    </tr>
+                </thead>
+                <tbody id="statementTableBody">
+                    <!-- البيانات المعروضة (فواتير فقط) -->
+                </tbody>
+            </table>
+
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 25px;">
+                <div style="width: 260px; border: 1.5px solid #222; padding: 8px 12px; border-radius: 4px; font-size: 14px; background: #fafafa;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: bold; color: #333;">Total Invoices:</span>
+                        <strong id="stSumSales" style="color: #d32f2f; font-size: 16px;">0.000 KD</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 30px; font-size: 13px; font-weight: bold; color: #222;">
+                <div style="text-align: center;">
+                    Financial Director Signature:<br><br><br>
+                    ....................................................
+                </div>
+                <div style="text-align: center;">
+                    Company Stamp:<br><br><br>
+                    [ FONDANT CHOCO ]
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let editId = null;
+
+    // خريطة تبديل أسماء العملاء من الاسم القديم إلى الاسم الجديد الكامل (المستخرجة من ملف الإكسل)
+    const customerMap = {
+        "ADAN": "Al-Adan Hospital",
+        "JAHRA": "Al-Jahra Hospital",
+        "AL RAZI": "Al-Razi Hospital",
+        "HYA": "Hya Elhabib Hospital",
+        "HICHAM": "Hisham Al-Sager Hospital",
+        "HICHAM AL-SAGER": "Hisham Al-Sager Hospital",
+        "AHMAD": "Hamed Al-Eissa Hospital",
+        "NBK": "NBK Hospital",
+        "PHSYALOGY": "Physiology Hospital",
+        "HIE UNIVERSITY": "Higher Institute of Energy - HIE",
+        "HEALTH SCIENCE": "College of Health Sciences - Boys",
+        "TECHNOLOGH GIRLS": "College of Technological Studies - Girls",
+        "NEW RAZI": "New Al-Razi Hospital",
+        "EDMAN": "Addiction Treatment Center - ATC",
+        "M OF HEALTH": "Ministry of Health",
+        "OMOMA": "Al Omooma Hospital",
+        "AL OMOMA": "Al Omooma Hospital"
+    };
+
+    // دالة استبدال اسم العميل بالاسم الكامل الجديد
+    function normalizeCustomerName(rawName) {
+        if (!rawName) return '';
+        let clean = String(rawName).trim().toUpperCase();
+        if (customerMap[clean]) {
+            return customerMap[clean];
+        }
+        // بحث مرن في حالة وجود اختلافات طفيفة في الأحرف
+        for (let key in customerMap) {
+            if (clean === key || clean.includes(key)) {
+                return customerMap[key];
+            }
+        }
+        // إذا لم يكن مخزناً مسبقاً، يُحفظ كما هو بصيغة Title Case
+        return String(rawName).trim().toLowerCase().replace(/(?:^|\s|-)\w/g, function(match) {
+            return match.toUpperCase();
+        });
+    }
+
+    // قاعدة بيانات العملاء بالأسماء الجديدة الكاملة
+    const customersDB = [
+        "Al-Adan Hospital",
+        "Al-Jahra Hospital",
+        "Al-Razi Hospital",
+        "Hya Elhabib Hospital",
+        "Hisham Al-Sager Hospital",
+        "Hamed Al-Eissa Hospital",
+        "NBK Hospital",
+        "Physiology Hospital",
+        "Higher Institute of Energy - HIE",
+        "College of Health Sciences - Boys",
+        "College of Technological Studies - Girls",
+        "New Al-Razi Hospital",
+        "Addiction Treatment Center - ATC",
+        "Ministry of Health",
+        "Al Omooma Hospital"
+    ];
+
+    const lastSavedDate = localStorage.getItem('fondant_last_sale_date') || new Date().toISOString().split('T')[0];
+    document.getElementById('saleDate').value = lastSavedDate;
+
+    let salesRecords = JSON.parse(localStorage.getItem('fondant_sales_records') || '[]');
+    
+    // تحديث وتلقيم الأسماء القديمة في السجلات المخزنة محلياً إلى الأسماء الجديدة الكاملة
+    salesRecords = salesRecords.map((r, i) => ({
+        id: r.id || (Date.now() + i),
+        ...r,
+        customer: normalizeCustomerName(r.customer)
+    }));
+
+    function parseExcelDate(val) {
+        if (!val && val !== 0) return new Date().toISOString().split('T')[0];
+        if (typeof val === 'number' || (!isNaN(val) && !String(val).includes('-') && !String(val).includes('/'))) {
+            const dateObj = XLSX.SSF.parse_date_code(Number(val));
+            if (dateObj) {
+                const y = dateObj.y;
+                const m = String(dateObj.m).padStart(2, '0');
+                const d = String(dateObj.d).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+        }
+        let strDate = String(val).trim();
+        if (strDate.includes('/')) {
+            const parts = strDate.split('/');
+            if (parts.length === 3) {
+                if (parts[0].length === 4) return `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+                return `${parts[2]}-${String(parts[1]).padStart(2, '0')}-${String(parts[0]).padStart(2, '0')}`;
+            }
+        }
+        return strDate;
+    }
+
+    function getRowValue(row, possibleKeys) {
+        const rowKeys = Object.keys(row);
+        for (let key of possibleKeys) {
+            const foundKey = rowKeys.find(k => k.trim().toLowerCase() === key.trim().toLowerCase());
+            if (foundKey && row[foundKey] !== undefined && row[foundKey] !== "") {
+                return row[foundKey];
+            }
+        }
+        return "";
+    }
+
+    function checkBackupReminder() {
+        const lastBackup = localStorage.getItem('fondant_last_sales_backup_time');
+        const halfHour = 30 * 60 * 1000;
+        if (!lastBackup || (Date.now() - parseInt(lastBackup)) > halfHour) {
+            document.getElementById('backupReminderBanner').style.display = 'flex';
+        } else {
+            document.getElementById('backupReminderBanner').style.display = 'none';
+        }
+    }
+
+    function dismissBackupReminder() {
+        document.getElementById('backupReminderBanner').style.display = 'none';
+    }
+
+    function exportJsonBackup() {
+        const backupData = {
+            salesRecords: salesRecords,
+            lastDate: localStorage.getItem('fondant_last_sale_date'),
+            backupTime: Date.now()
+        };
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `FondantChoco_Sales_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        
+        localStorage.setItem('fondant_last_sales_backup_time', Date.now());
+        checkBackupReminder();
+        alert('تم تصدير النسخة الاحتياطية بنجاح!');
+    }
+
+    function importJsonBackup(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.salesRecords && Array.isArray(data.salesRecords)) {
+                    salesRecords = data.salesRecords.map((r, i) => ({ 
+                        id: r.id || (Date.now() + i), 
+                        ...r,
+                        customer: normalizeCustomerName(r.customer)
+                    }));
+                    localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+                    if (data.lastDate) localStorage.setItem('fondant_last_sale_date', data.lastDate);
+                    localStorage.setItem('fondant_last_sales_backup_time', Date.now());
+                    renderSalesTable();
+                    setNextInvoiceNumber();
+                    checkBackupReminder();
+                    alert('تمت استعادة النسخة الاحتياطية وتحديث أسماء العملاء للأسماء الكاملة بنجاح!');
+                } else {
+                    alert('الملف المرفق غير صالح.');
+                }
+            } catch (err) {
+                alert('حدث خطأ أثناء قراءة الملف الاحتياطي.');
+            }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    function importOldExcelData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const shouldClear = confirm("هل تريد مسح البيانات الحالية واستبدالها بالكامل ببيانات الملف الجديد؟\n\n- موافق: مسح القديم وإدخال الجديد.\n- إلغاء: دمج البيانات الجديدة مع الحالية.");
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                if (jsonData.length === 0) {
+                    alert("الملف لا يحتوي على بيانات.");
+                    return;
+                }
+
+                if (shouldClear) {
+                    salesRecords = [];
+                }
+
+                let addedCount = 0;
+
+                jsonData.forEach((row, idx) => {
+                    const dateRaw = getRowValue(row, ["التاريخ", "تاريخ", "Date"]);
+                    const invNoVal = getRowValue(row, ["رقم الفاتورة", "الفاتورة", "InvoiceNo", "Invoice No"]);
+                    const custVal = getRowValue(row, ["اسم العميل", "العميل", "Customer", "Customer Name"]);
+                    const amountRaw = getRowValue(row, ["المبلغ (KD)", "المبلغ", "Amount", "الصافي (KD)"]);
+                    const returnsRaw = getRowValue(row, ["المرتجع (KD)", "المرتجع", "Returns", "المرتجعات"]);
+
+                    const formattedDate = parseExcelDate(dateRaw);
+                    const amountVal = parseFloat(amountRaw) || 0;
+                    const returnsVal = parseFloat(returnsRaw) || 0;
+                    const customerName = normalizeCustomerName(custVal);
+
+                    if (customerName !== "" || amountVal > 0 || returnsVal > 0) {
+                        salesRecords.push({
+                            id: Date.now() + Math.random() + idx,
+                            date: formattedDate,
+                            invoiceNo: String(invNoVal).trim() !== "" ? String(invNoVal).trim() : "-",
+                            customer: customerName || "Unspecified",
+                            amount: amountVal.toFixed(3),
+                            returns: returnsVal.toFixed(3)
+                        });
+                        addedCount++;
+                    }
+                });
+
+                localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+                renderSalesTable();
+                setNextInvoiceNumber();
+                alert(`تم استيراد (${addedCount}) سجل بنجاح واستبدال أسماء العملاء بالأسماء الكاملة!`);
+            } catch (err) {
+                alert("حدث خطأ أثناء قراءة ملف الإكسل.");
+            }
+            event.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function setNextInvoiceNumber() {
+        if (editId !== null) return;
+        let nextNum = 4318;
+        if (salesRecords.length > 0) {
+            const numericInvoices = salesRecords.map(r => parseInt(r.invoiceNo)).filter(n => !isNaN(n));
+            if (numericInvoices.length > 0) {
+                const maxNum = Math.max(...numericInvoices);
+                nextNum = maxNum + 1;
+            }
+        }
+        document.getElementById('invoiceNo').value = nextNum;
+    }
+
+    setNextInvoiceNumber();
+
+    const customerInput = document.getElementById('customerInput');
+    const customerList = document.getElementById('customerList');
+
+    function selectCustomer(name) {
+        customerInput.value = name;
+        customerList.style.display = 'none';
+        document.getElementById('saleAmount').focus();
+    }
+
+    customerInput.addEventListener('input', function() {
+        const val = this.value.toLowerCase().trim();
+        customerList.innerHTML = '';
+        if(!val) { customerList.style.display = 'none'; return; }
+        const matches = customersDB.filter(c => c.toLowerCase().includes(val));
+        if(matches.length) {
+            matches.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.innerText = m;
+                div.onclick = () => selectCustomer(m);
+                customerList.appendChild(div);
+            });
+            customerList.style.display = 'block';
+        } else { customerList.style.display = 'none'; }
+    });
+
+    const formFields = ['saleDate', 'invoiceNo', 'customerInput', 'saleAmount', 'returnAmount'];
+    formFields.forEach((id, index) => {
+        const field = document.getElementById(id);
+        field.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (id === 'customerInput') {
+                    const firstItem = customerList.querySelector('.autocomplete-item');
+                    if (customerList.style.display === 'block' && firstItem) {
+                        selectCustomer(firstItem.innerText);
+                        return;
+                    } else {
+                        customerList.style.display = 'none';
+                        document.getElementById('saleAmount').focus();
+                        return;
+                    }
+                }
+                if (index < formFields.length - 1) {
+                    document.getElementById(formFields[index + 1]).focus();
+                } else {
+                    addSaleRecord();
+                }
+            }
+        });
+    });
+
+    function renderSalesTable() {
+        const tbody = document.getElementById('salesTableBody');
+        tbody.innerHTML = '';
+        
+        let sumSales = 0;
+        let sumReturns = 0;
+
+        let recordsToDisplay = [...salesRecords];
+        const sortVal = document.getElementById('sortSelect') ? document.getElementById('sortSelect').value : 'default';
+
+        if (sortVal === 'date_desc') {
+            recordsToDisplay.sort((a, b) => new Date(b.date) - new Date(a.date));
+        } else if (sortVal === 'date_asc') {
+            recordsToDisplay.sort((a, b) => new Date(a.date) - new Date(b.date));
+        } else if (sortVal === 'inv_asc') {
+            recordsToDisplay.sort((a, b) => {
+                let numA = parseInt(a.invoiceNo) || 0;
+                let numB = parseInt(b.invoiceNo) || 0;
+                return numA - numB;
+            });
+        } else if (sortVal === 'inv_desc') {
+            recordsToDisplay.sort((a, b) => {
+                let numA = parseInt(a.invoiceNo) || 0;
+                let numB = parseInt(b.invoiceNo) || 0;
+                return numB - numA;
+            });
+        }
+
+        if (recordsToDisplay.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="color: #777;">لا توجد مبيعات مسجلة حتى الآن.</td></tr>';
+        } else {
+            recordsToDisplay.forEach((record, index) => {
+                const amount = parseFloat(record.amount) || 0;
+                const ret = parseFloat(record.returns) || 0;
+
+                sumSales += amount;
+                sumReturns += ret;
+
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${record.date}</td>
+                    <td><b>${record.invoiceNo || '-'}</b></td>
+                    <td>${record.customer}</td>
+                    <td>${amount.toFixed(3)}</td>
+                    <td style="color: #007bff;">${ret.toFixed(3)}</td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editSale(${record.id})">تعديل ✏️</button>
+                        <button class="btn btn-danger" onclick="deleteSale(${record.id})">حذف 🗑️</button>
+                    </td>
+                `;
+            });
+        }
+
+        document.getElementById('totalSales').innerText = sumSales.toFixed(3) + ' KD';
+        document.getElementById('totalReturns').innerText = sumReturns.toFixed(3) + ' KD';
+        document.getElementById('netTotal').innerText = (sumSales - sumReturns).toFixed(3) + ' KD';
+    }
+
+    function addSaleRecord() {
+        const date = document.getElementById('saleDate').value;
+        const invoiceNo = document.getElementById('invoiceNo').value.trim();
+        const customerRaw = customerInput.value.trim();
+        const amountRaw = document.getElementById('saleAmount').value.trim();
+        const returnsRaw = document.getElementById('returnAmount').value.trim();
+
+        if (!customerRaw) {
+            alert('يرجى اختيار أو إدخال اسم العميل.');
+            return;
+        }
+
+        const customer = normalizeCustomerName(customerRaw);
+
+        if (invoiceNo !== "" && invoiceNo !== "-") {
+            const isDuplicate = salesRecords.some(r => r.invoiceNo === invoiceNo && r.id !== editId);
+            if (isDuplicate) {
+                alert(`⚠️ خطأ: رقم الفاتورة (${invoiceNo}) مسجل مسبقاً! يرجى التأكد من الرقم أو تركه فارغاً لتخطيه.`);
+                document.getElementById('invoiceNo').focus();
+                return;
+            }
+        }
+
+        const amountVal = parseFloat(amountRaw) || 0;
+        const returnsVal = parseFloat(returnsRaw) || 0;
+
+        if (amountVal <= 0 && returnsVal <= 0) {
+            alert('يرجى إدخال مبلغ الفاتورة أو المرتجع.');
+            return;
+        }
+
+        localStorage.setItem('fondant_last_sale_date', date);
+
+        if (editId !== null) {
+            const idx = salesRecords.findIndex(r => r.id === editId);
+            if (idx !== -1) {
+                salesRecords[idx] = {
+                    id: editId,
+                    date: date,
+                    invoiceNo: invoiceNo !== "" ? invoiceNo : "-",
+                    customer: customer,
+                    amount: amountVal.toFixed(3),
+                    returns: returnsVal.toFixed(3)
+                };
+            }
+            editId = null;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = '➕ إضافة';
+            submitBtn.className = 'btn btn-primary';
+        } else {
+            salesRecords.unshift({
+                id: Date.now() + Math.random(),
+                date: date,
+                invoiceNo: invoiceNo !== "" ? invoiceNo : "-",
+                customer: customer,
+                amount: amountVal.toFixed(3),
+                returns: returnsVal.toFixed(3)
+            });
+        }
+
+        localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+        renderSalesTable();
+
+        setNextInvoiceNumber();
+        customerInput.value = '';
+        document.getElementById('saleAmount').value = '';
+        document.getElementById('returnAmount').value = '';
+        customerInput.focus();
+    }
+
+    function editSale(id) {
+        const record = salesRecords.find(r => r.id === id);
+        if (!record) return;
+        
+        editId = id;
+        document.getElementById('saleDate').value = record.date;
+        document.getElementById('invoiceNo').value = record.invoiceNo === '-' ? '' : record.invoiceNo;
+        customerInput.value = record.customer;
+        document.getElementById('saleAmount').value = record.amount;
+        document.getElementById('returnAmount').value = record.returns;
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerText = '💾 تحديث الفاتورة';
+        submitBtn.className = 'btn btn-warning';
+
+        customerInput.focus();
+    }
+
+    function deleteSale(id) {
+        if (confirm('هل أنت متأكد من حذف هذا السجل؟')) {
+            const idx = salesRecords.findIndex(r => r.id === id);
+            if (idx !== -1) {
+                salesRecords.splice(idx, 1);
+            }
+            if (editId === id) {
+                editId = null;
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.innerText = '➕ إضافة';
+                submitBtn.className = 'btn btn-primary';
+            }
+            localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+            renderSalesTable();
+            setNextInvoiceNumber();
+            customerInput.focus();
+        }
+    }
+
+    function exportToExcel() {
+        if (salesRecords.length === 0) {
+            alert('لا توجد بيانات لتصديرها.');
+            return;
+        }
+
+        const excelData = salesRecords.map((r, i) => ({
+            "م": i + 1,
+            "التاريخ": r.date,
+            "رقم الفاتورة": r.invoiceNo,
+            "اسم العميل": r.customer,
+            "المبلغ (KD)": parseFloat(r.amount),
+            "المرتجع (KD)": parseFloat(r.returns),
+            "الصافي (KD)": parseFloat(r.amount) - parseFloat(r.returns)
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "مبيعات FONDANT CHOCO");
+
+        XLSX.writeFile(workbook, `FondantChoco_Sales_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    /* --- وظائف كشف الحساب بالإنجليزية كلياً --- */
+    function openStatementModal() {
+        const stCustSelect = document.getElementById('stCustomerSelect');
+        stCustSelect.innerHTML = '<option value="ALL">-- ALL BRANCHES / CUSTOMERS --</option>';
+        
+        let uniqueCustomers = [...new Set([...salesRecords.map(r => r.customer), ...customersDB])].sort();
+        uniqueCustomers.forEach(c => {
+            if (c) {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                stCustSelect.appendChild(opt);
+            }
+        });
+
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const todayStr = now.toISOString().split('T')[0];
+        
+        document.getElementById('stFromDate').value = firstDay;
+        document.getElementById('stToDate').value = todayStr;
+
+        generateStatementPreview();
+        document.getElementById('statementModal').style.display = 'flex';
+    }
+
+    function closeStatementModal() {
+        document.getElementById('statementModal').style.display = 'none';
+    }
+
+    function generateStatementPreview() {
+        const fromDate = document.getElementById('stFromDate').value;
+        const toDate = document.getElementById('stToDate').value;
+        const selectedCust = document.getElementById('stCustomerSelect').value;
+
+        document.getElementById('stPeriodText').innerText = `For the Period From (${fromDate || 'Beginning'}) To (${toDate || 'Today'})`;
+        document.getElementById('stCustomerLabel').innerText = `Customer Branch: ${selectedCust === 'ALL' ? 'All Branches' : selectedCust}`;
+        document.getElementById('stDatePrint').innerText = `Issue Date: ${new Date().toLocaleDateString('en-GB')}`;
+
+        let filtered = salesRecords.filter(r => {
+            let matchDate = true;
+            if (fromDate && r.date < fromDate) matchDate = false;
+            if (toDate && r.date > toDate) matchDate = false;
+            
+            let matchCust = true;
+            if (selectedCust !== 'ALL' && r.customer !== selectedCust) matchCust = false;
+
+            return matchDate && matchCust;
+        });
+
+        filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        const tbody = document.getElementById('statementTableBody');
+        tbody.innerHTML = '';
+
+        let sumSalesOnly = 0;
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="color: #777; padding: 10px;">No invoices registered during this period.</td></tr>';
+        } else {
+            filtered.forEach((r, idx) => {
+                const amt = parseFloat(r.amount) || 0;
+                sumSalesOnly += amt;
+
+                const tr = tbody.insertRow();
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td>${r.date}</td>
+                    <td><b>${r.invoiceNo || '-'}</b></td>
+                    <td>${r.customer}</td>
+                    <td style="font-weight: bold; color: #d32f2f;">${amt.toFixed(3)}</td>
+                `;
+            });
+        }
+
+        document.getElementById('stSumSales').innerText = sumSalesOnly.toFixed(3) + ' KD';
+    }
+
+    function printStatementPDF() {
+        const printContent = document.getElementById('statementPrintArea').innerHTML;
+        const win = window.open('', '', 'height=700,width=900');
+        win.document.write('<html><head><title>Statement of Account - FONDANT CHOCO</title>');
+        win.document.write('<style>');
+        win.document.write('body { font-family: "Segoe UI", Arial, sans-serif; direction: ltr; text-align: left; padding: 15px; color: #111; }');
+        win.document.write('.en-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 11px; }');
+        win.document.write('.en-table th, .en-table td { border: 1px solid #222; padding: 2px 5px; text-align: center; line-height: 1.15; }');
+        win.document.write('.en-table th { background: #f2f2f2; color: #000; font-weight: bold; padding: 4px 5px; }');
+        win.document.write('.st-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #222; padding-bottom: 6px; margin-bottom: 8px; }');
+        win.document.write('.st-company-info h3 { font-size: 18px; margin-bottom: 2px; font-weight: 800; }');
+        win.document.write('.st-company-info p { font-size: 11px; color: #555; }');
+        win.document.write('.st-logo-img { max-height: 45px; max-width: 110px; object-fit: contain; }');
+        win.document.write('.st-title-section { text-align: center; margin: 6px 0 10px 0; }');
+        win.document.write('.st-client-name { font-size: 20px; font-weight: 900; color: #0d47a1; text-transform: uppercase; margin-bottom: 2px; }');
+        win.document.write('.st-statement-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 2px; text-transform: uppercase; }');
+        win.document.write('.st-period-subtitle { font-size: 12px; font-weight: 600; color: #555; }');
+        win.document.write('.st-meta { display: flex; justify-content: space-between; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px; font-weight: bold; border: 1px solid #ddd; }');
+        win.document.write('@media print { body { padding: 0; } }');
+        win.document.write('</style>');
+        win.document.write('</head><body>');
+        win.document.write(printContent);
+        win.document.write('</body></html>');
+        win.document.close();
+        win.focus();
+        setTimeout(() => {
+            win.print();
+            win.close();
+        }, 500);
+    }
+
+    checkBackupReminder();
+    setInterval(checkBackupReminder, 60000);
+
+    renderSalesTable();
+</script>
+
+</body>
+</html>

@@ -4,69 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FONDANT CHOCO - سجل تسجيل ومتابعة المبيعات</title>
-    <!-- مكتبات Excel والطباعة -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- مكتبة تصدير PDF -->
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #eef2f5; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; display: flex; justify-content: center; color: #111; flex-direction: column; align-items: center; }
-        .sales-system { max-width: 1000px; width: 100%; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .sales-system { max-width: 1200px; width: 100%; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
 
-        /* عنوان الشركة مع الشعار */
-        .company-header {
-            display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 5px;
-        }
+        .company-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 5px; }
         .company-header img { height: 50px; object-fit: contain; }
         .company-header h2 { color: #222; font-family: Arial, sans-serif; margin: 0; }
         .company-subtitle { text-align: center; font-size: 15px; font-weight: bold; color: #555; margin-bottom: 20px; }
 
-        /* شريط التنبيه بالنسخة الاحتياطية */
         #backupReminderBanner {
-            width: 100%; max-width: 1000px; background: #ff9800; color: #fff; padding: 10px 15px;
+            width: 100%; max-width: 1200px; background: #ff9800; color: #fff; padding: 10px 15px;
             border-radius: 6px; font-weight: bold; font-size: 14px; margin-bottom: 15px;
             display: none; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        /* شريط التحكم العلوي والفرز */
-        .header-controls {
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;
-        }
-        .top-actions-bar {
-            display: flex; gap: 8px; flex-wrap: wrap;
-        }
-        .sort-box {
-            display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 5px 10px; border-radius: 6px; border: 1px solid #ddd;
-        }
+        .header-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .top-actions-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+        .sort-box { display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 5px 10px; border-radius: 6px; border: 1px solid #ddd; }
         .sort-box label { font-size: 12px; font-weight: bold; color: #444; }
 
-        /* إزالة أسهم الأرقام */
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
-        /* تبويبات الشاشات */
         .tabs-nav { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 2px solid #ddd; flex-wrap: wrap; }
-        .tab-btn {
-            padding: 11px 18px; border: none; background: #e9ecef; color: #444; font-weight: bold;
-            font-size: 14px; cursor: pointer; border-radius: 6px 6px 0 0; transition: 0.2s; font-family: inherit;
-        }
+        .tab-btn { padding: 11px 16px; border: none; background: #e9ecef; color: #444; font-weight: bold; font-size: 13px; cursor: pointer; border-radius: 6px 6px 0 0; transition: 0.2s; font-family: inherit; }
         .tab-btn:hover { background: #dee2e6; }
         .tab-btn.active { background: #28a745; color: #fff; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* نموذج الإدخال */
         .form-grid {
             display: grid;
             grid-template-columns: 140px 130px 1fr 130px 130px 110px;
-            gap: 10px;
-            align-items: center;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            margin-bottom: 20px;
+            gap: 10px; align-items: center; background: #f8f9fa; padding: 15px;
+            border-radius: 6px; border: 1px solid #ddd; margin-bottom: 20px;
         }
 
         .form-group { display: flex; flex-direction: column; gap: 5px; position: relative; }
@@ -75,13 +51,23 @@
         .form-control {
             padding: 8px; border: 1px solid #ccc; border-radius: 4px;
             font-size: 14px; font-weight: bold; outline: none; text-align: center; background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
         .form-control:focus { border-color: #28a745; }
+
+        .form-control.duplicate-warning {
+            border-color: #dc3545 !important;
+            background: #fff5f5 !important;
+            box-shadow: 0 0 0 2px rgba(220,53,69,0.2) !important;
+        }
+        .field-warning-msg {
+            display: none; color: #dc3545; font-size: 11px; font-weight: bold;
+            margin-top: 2px; text-align: right; line-height: 1.2;
+        }
 
         #customerInput { text-align: right; text-transform: capitalize; }
         #extCustomerInput, #extDescription { text-align: right; }
 
-        /* نموذج المبيعات الخارجية (صفّان) */
         .ext-form-grid {
             grid-template-columns: 140px 120px 1fr 120px 120px 130px;
             grid-template-areas:
@@ -98,7 +84,21 @@
         .ext-form-grid .fg-desc { grid-area: edesc; }
         .ext-form-grid .ext-submit { grid-area: ebtn; height: 38px; margin-top: 0; }
 
-        /* الأزرار */
+        .delivery-form-grid {
+            grid-template-columns: 140px 130px 130px 130px 1fr 110px;
+        }
+
+        .commission-preview {
+            display: none; margin-bottom: 15px; padding: 12px 15px;
+            background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px;
+            font-weight: bold; font-size: 13px;
+        }
+        .commission-preview .commission-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 12px; }
+        .commission-preview .commission-row > div { padding: 2px 6px; }
+        .commission-preview .commission-val { color: #c1121f; }
+        .commission-preview .payment-val { color: #e67e22; }
+        .commission-preview .net-val { color: #0d47a1; }
+
         .btn { padding: 8px 14px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-primary { background: #28a745; color: white; height: 38px; margin-top: 20px; }
         .btn-primary:hover { background: #218838; }
@@ -119,123 +119,106 @@
         .btn-pdf { background: #e63946; color: white; }
         .btn-pdf:hover { background: #c1121f; }
 
-        /* جدول العرض الأساسي */
-        .sales-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        .sales-table th, .sales-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        .sales-table th { background: #343a40; color: white; font-weight: bold; }
+        .sales-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+        .sales-table th, .sales-table td { border: 1px solid #ddd; padding: 6px 4px; text-align: center; }
+        .sales-table th { background: #343a40; color: white; font-weight: bold; font-size: 11px; }
         .sales-table tr:nth-child(even) { background: #f9f9f9; }
-        .sales-table td.desc-cell { max-width: 200px; word-wrap: break-word; white-space: normal; text-align: right; font-size: 13px; }
-        .sales-table td.collector-cell { font-size: 13px; font-weight: bold; color: #0d47a1; }
+        .sales-table td.desc-cell { max-width: 180px; word-wrap: break-word; white-space: normal; text-align: right; font-size: 12px; }
+        .sales-table td.collector-cell { font-size: 12px; font-weight: bold; color: #0d47a1; }
+        .sales-table td.payment-cell { font-size: 12px; font-weight: bold; color: #0d47a1; }
+        .sales-table td.commission-cell { font-size: 12px; font-weight: bold; color: #c1121f; }
+        .sales-table td.paymentfee-cell { font-size: 12px; font-weight: bold; color: #e67e22; }
+        .sales-table td.net-cell { font-size: 12px; font-weight: bold; color: #0d47a1; }
 
-        /* قائمة البحث التلقائي للعملاء */
-        .autocomplete-list { 
-            position: absolute; top: 100%; right: 0; left: 0; 
-            background: #e3f2fd; border: 1.5px solid #90caf9; 
-            max-height: 240px; overflow-y: auto; z-index: 1000; 
+        .autocomplete-list {
+            position: absolute; top: 100%; right: 0; left: 0;
+            background: #e3f2fd; border: 1.5px solid #90caf9;
+            max-height: 240px; overflow-y: auto; z-index: 1000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; text-align: right; border-radius: 6px;
         }
-        .autocomplete-item { 
-            padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #bbdefb; 
-            font-size: 20px; font-weight: bold; color: #0d47a1;
-        }
+        .autocomplete-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #bbdefb; font-size: 16px; font-weight: bold; color: #0d47a1; }
         .autocomplete-item:hover { background: #bbdefb; }
 
-        /* ملخص الإجماليات */
-        .summary-box { display: flex; justify-content: flex-end; gap: 20px; margin-top: 15px; font-size: 16px; font-weight: bold; flex-wrap: wrap; }
-        .summary-item { background: #e9ecef; padding: 8px 15px; border-radius: 5px; border: 1px solid #ced4da; }
+        .summary-box { display: flex; justify-content: flex-end; gap: 12px; margin-top: 15px; font-size: 13px; font-weight: bold; flex-wrap: wrap; }
+        .summary-item { background: #e9ecef; padding: 8px 12px; border-radius: 5px; border: 1px solid #ced4da; }
         .summary-val { color: #d32f2f; }
+        .summary-val.commission { color: #c1121f; }
+        .summary-val.paymentfee { color: #e67e22; }
+        .summary-val.net { color: #0d47a1; }
 
-        /* جدول التقرير اليومي */
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        .report-table th, .report-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        .report-table th { background: #343a40; color: white; font-weight: bold; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        .report-table th, .report-table td { border: 1px solid #ddd; padding: 4px 3px; text-align: center; }
+        .report-table th { background: #343a40; color: white; font-weight: bold; font-size: 10px; }
         .report-table tbody tr:nth-child(even) { background: #f9f9f9; }
         .report-table tfoot td { background: #e9ecef; font-weight: bold; border-top: 2px solid #343a40; }
         .report-title { text-align: center; font-size: 18px; font-weight: 800; margin: 12px 0 4px; color: #222; }
         .report-period { text-align: center; font-size: 13px; color: #555; margin-bottom: 10px; font-weight: bold; }
 
-        /* ترويسة التقرير الاحترافية */
-        .report-header {
-            display: flex; align-items: center; justify-content: space-between;
-            border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 12px;
-        }
+        .report-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 12px; }
         .report-header-left { display: flex; align-items: center; gap: 12px; }
         .report-header-left img { height: 48px; object-fit: contain; }
         .report-header-left h3 { margin: 0; font-size: 18px; font-weight: 800; }
         .report-header-left p { margin: 0; font-size: 11px; color: #555; }
         .report-header-right { text-align: left; font-size: 12px; color: #555; font-weight: bold; }
 
-        /* تقرير يومي مضغوط */
         .report-table.compact { font-size: 11px; }
-        .report-table.compact th, .report-table.compact td { padding: 2px 4px; line-height: 1.15; }
-        .report-table.compact tfoot td { padding: 3px 4px; }
+        .report-table.compact th, .report-table.compact td { padding: 3px 3px; line-height: 1.15; }
+        .report-table.compact tfoot td { padding: 4px 3px; }
 
-        /* ========== جدول مصفوفة العملاء × الأيام ========== */
         .matrix-scroll { overflow-x: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px; background: #fafbfc; }
         .matrix-page { margin-bottom: 14px; }
         .matrix-page.matrix-page-break { page-break-before: always; break-before: page; }
-        
-        /* فصل العنوان لمنع التداخل */
-        .matrix-page-title {
-            font-size: 13px; font-weight: bold; color: #222; margin-bottom: 6px;
-            text-align: center; background: #eef2f5; padding: 6px 8px; border-radius: 4px;
-            border: 1px solid #d0d7de; line-height: 1.4;
-        }
+        .matrix-page-title { font-size: 13px; font-weight: bold; color: #222; margin-bottom: 6px; text-align: center; background: #eef2f5; padding: 6px 8px; border-radius: 4px; border: 1px solid #d0d7de; line-height: 1.4; }
         .matrix-page-title .title-company { font-size: 14px; font-weight: 800; margin-bottom: 2px; }
-        
+
         .matrix-table { border-collapse: collapse; font-size: 9px; width: 100%; direction: ltr; table-layout: fixed; }
         .matrix-table th, .matrix-table td { border: 1px solid #999; padding: 1px 3px; text-align: center; line-height: 1.1; }
         .matrix-table th { background: #343a40; color: #fff; font-weight: bold; padding: 2px 3px; }
-        
-        /* محاذاة اسم العميل لليسار */
         .matrix-table td.cust-name { text-align: left !important; direction: ltr; font-weight: bold; background: #f1f3f5; white-space: normal; word-wrap: break-word; padding-left: 6px; font-family: 'Segoe UI', Tahoma, sans-serif; }
         .matrix-table th.cust-name { text-align: left !important; direction: ltr; padding-left: 6px; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        
-        /* إصلاح الحروف المنفصلة (الإجمالي) */
         .matrix-table .total-col { font-weight: bold; color: #d32f2f; background: #fff5f5; direction: rtl; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        
-        /* صف الإجماليات أسفل الجدول */
         .matrix-table tr.totals-row td { background: #e9ecef; font-weight: bold; border-top: 2px solid #333; }
         .matrix-table tr.totals-row td:first-child { direction: rtl; text-align: right; padding-right: 6px; font-family: 'Segoe UI', Tahoma, sans-serif; }
         .matrix-table tr.totals-row td.total-col { background: #ffe0e0; color: #b71c1c; }
 
-        /* جدول كشف حساب المبيعات الخارجية */
         .ext-st-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .ext-st-table th, .ext-st-table td { border: 1px solid #999; padding: 2px 5px; text-align: center; line-height: 1.2; }
         .ext-st-table th { background: #222; color: #fff; font-weight: bold; padding: 4px 5px; }
         .ext-st-table tbody tr:nth-child(even) { background: #f9f9f9; }
         .ext-st-table tfoot td { background: #e9ecef; font-weight: bold; }
 
-        /* مودال كشف الحساب الاحترافي */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 3000; padding: 10px; }
         .modal-content { background: white; width: 100%; max-width: 900px; max-height: 90vh; border-radius: 8px; padding: 20px; overflow-y: auto; text-align: right; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 8px; margin-bottom: 12px; }
-        
+
         .statement-print-area { background: #fff; padding: 15px; border: 1px solid #eee; direction: ltr; text-align: left; font-family: 'Segoe UI', Arial, sans-serif; }
         .st-header { border-bottom: 2px solid #222; padding-bottom: 8px; margin-bottom: 10px; }
         .st-company-info > div { display: flex; align-items: center; gap: 10px; margin-bottom: 3px; }
         .st-company-info h3 { font-size: 20px; color: #111; margin: 0; font-weight: 800; }
         .st-company-info p { font-size: 12px; color: #555; }
         .st-logo-img { max-height: 48px; max-width: 120px; object-fit: contain; }
-        
+
         .st-title-section { text-align: center; margin: 8px 0 12px 0; }
         .st-client-name { font-size: 22px; font-weight: 900; color: #0d47a1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
         .st-statement-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 3px; text-transform: uppercase; }
         .st-period-subtitle { font-size: 13px; font-weight: 600; color: #555; }
 
         .st-meta { display: flex; justify-content: space-between; background: #f8f9fa; padding: 6px 12px; border-radius: 4px; font-size: 12px; margin-bottom: 10px; font-weight: bold; border: 1px solid #e9ecef; }
-        
+
         .filters-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: flex-end; }
 
         .en-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px; }
         .en-table th, .en-table td { border: 1px solid #aaa; padding: 3px 6px; text-align: center; line-height: 1.2; }
         .en-table th { background: #222; color: #fff; font-weight: bold; padding: 5px 6px; }
         .en-table tr:nth-child(even) { background: #f9f9f9; }
+
+        /* PDF export chunking classes */
+        .pdf-tab-chunk { page-break-inside: avoid; break-inside: avoid; }
+        .pdf-tab-break { page-break-before: always; break-before: page; }
     </style>
 </head>
 <body>
 
-<!-- شريط التنبيه بالنسخة الاحتياطية -->
 <div id="backupReminderBanner">
     <span>⚠️ تنبيه: مر أكثر من 30 دقيقة دون أخذ نسخة احتياطية لبيانات المبيعات!</span>
     <div style="display: flex; gap: 8px;">
@@ -245,14 +228,12 @@
 </div>
 
 <div class="sales-system">
-    <!-- عنوان الشركة مع الشعار -->
     <div class="company-header">
         <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Fondant Choco Logo">
         <h2>FONDANT CHOCO</h2>
     </div>
     <div class="company-subtitle">نظام تسجيل ومتابعة مبيعات العملاء</div>
 
-    <!-- أزرار عامة (نسخ احتياطي / استعادة) -->
     <div class="header-controls">
         <div class="top-actions-bar">
             <button class="btn btn-secondary" onclick="exportJsonBackup()">💾 نسخة الاحتياطية</button>
@@ -261,17 +242,17 @@
         </div>
     </div>
 
-    <!-- تبويبات الشاشات -->
     <div class="tabs-nav">
         <button class="tab-btn active" data-tab="hospitalTab" onclick="switchTab('hospitalTab')">🏥 مبيعات المستشفيات</button>
         <button class="tab-btn" data-tab="externalTab" onclick="switchTab('externalTab')">🛍️ المبيعات الخارجية اليومية</button>
+        <button class="tab-btn" data-tab="talabatTab" onclick="switchTab('talabatTab')">🛵 طلبات</button>
+        <button class="tab-btn" data-tab="keetaTab" onclick="switchTab('keetaTab')">🛵 كيتا</button>
         <button class="tab-btn" data-tab="reportTab" onclick="switchTab('reportTab')">📊 تقرير المبيعات اليومي</button>
         <button class="tab-btn" data-tab="matrixTab" onclick="switchTab('matrixTab')">📅 تقرير المستشفيات (عملاء × أيام)</button>
     </div>
 
     <!-- ================= شاشة مبيعات المستشفيات ================= -->
     <div id="hospitalTab" class="tab-content active">
-
         <div class="header-controls">
             <div class="top-actions-bar">
                 <button class="btn btn-success" onclick="exportToExcel()">📊 تصدير Excel</button>
@@ -279,7 +260,6 @@
                 <button class="btn btn-excel-import" onclick="document.getElementById('excelFileInput').click()">📥 استيراد إكسل</button>
                 <input type="file" id="excelFileInput" style="display: none;" accept=".xlsx, .xlsm" onchange="importOldExcelData(event)">
             </div>
-
             <div class="sort-box">
                 <label>فرز حسب:</label>
                 <select id="sortSelect" class="form-control" style="padding: 4px 8px; font-size: 13px;" onchange="renderSalesTable()">
@@ -292,59 +272,35 @@
             </div>
         </div>
 
-        <!-- نموذج إدخال المبيعات -->
         <div class="form-grid">
-            <div class="form-group">
-                <label>التاريخ:</label>
-                <input type="date" id="saleDate" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>رقم الفاتورة:</label>
-                <input type="number" id="invoiceNo" class="form-control" placeholder="اتركه فارغاً">
-            </div>
+            <div class="form-group"><label>التاريخ:</label><input type="date" id="saleDate" class="form-control"></div>
+            <div class="form-group"><label>رقم الفاتورة:</label><input type="number" id="invoiceNo" class="form-control" placeholder="اتركه فارغاً"></div>
             <div class="form-group">
                 <label>اسم العميل:</label>
                 <input type="text" id="customerInput" class="form-control" placeholder="اكتب اسم العميل...">
                 <div id="customerList" class="autocomplete-list"></div>
             </div>
-            <div class="form-group">
-                <label>المبلغ (KD):</label>
-                <input type="number" id="saleAmount" class="form-control" step="0.001" placeholder="0.000">
-            </div>
-            <div class="form-group">
-                <label>المرتجع (KD):</label>
-                <input type="number" id="returnAmount" class="form-control" step="0.001" placeholder="0.000">
-            </div>
+            <div class="form-group"><label>المبلغ (KD):</label><input type="number" id="saleAmount" class="form-control" step="0.001" placeholder="0.000"></div>
+            <div class="form-group"><label>المرتجع (KD):</label><input type="number" id="returnAmount" class="form-control" step="0.001" placeholder="0.000"></div>
             <button type="button" id="submitBtn" class="btn btn-primary" onclick="addSaleRecord()">➕ إضافة</button>
         </div>
 
-        <!-- جدول عرض المبيعات -->
         <table class="sales-table">
             <thead>
-                <tr>
-                    <th>#</th>
-                    <th>التاريخ</th>
-                    <th>رقم الفاتورة</th>
-                    <th>اسم العميل</th>
-                    <th>المبلغ (KD)</th>
-                    <th>المرتجع (KD)</th>
-                    <th>إجراءات</th>
-                </tr>
+                <tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>اسم العميل</th><th>المبلغ (KD)</th><th>المرتجع (KD)</th><th>إجراءات</th></tr>
             </thead>
             <tbody id="salesTableBody"></tbody>
         </table>
 
-        <!-- ملخص المبيعات -->
         <div class="summary-box">
             <div class="summary-item">إجمالي المبيعات: <span class="summary-val" id="totalSales">0.000 KD</span></div>
-            <div class="summary-item">إجمالي المرتجعات: <span class="summary-val" id="totalReturns" style="color:#007bff;">0.000 KD</span></div>
-            <div class="summary-item">الصافي النهائي: <span class="summary-val" id="netTotal">0.000 KD</span></div>
+            <div class="summary-item">إجمالي المرتجعات: <span class="summary-val" style="color:#007bff;" id="totalReturns">0.000 KD</span></div>
+            <div class="summary-item">الصافي النهائي: <span class="summary-val net" id="netTotal">0.000 KD</span></div>
         </div>
     </div>
 
-    <!-- ================= شاشة المبيعات الخارجية اليومية ================= -->
+    <!-- ================= شاشة المبيعات الخارجية ================= -->
     <div id="externalTab" class="tab-content">
-
         <div class="header-controls">
             <div class="top-actions-bar">
                 <button class="btn btn-success" onclick="exportExternalToExcel()">📊 تصدير Excel</button>
@@ -352,7 +308,6 @@
                 <input type="file" id="extExcelFileInput" style="display: none;" accept=".xlsx, .xlsm" onchange="importExternalExcel(event)">
                 <button class="btn btn-statement" onclick="openExtStatementModal()">📄 كشف حساب المبيعات الخارجية</button>
             </div>
-
             <div class="sort-box">
                 <label>فرز حسب:</label>
                 <select id="extSortSelect" class="form-control" style="padding: 4px 8px; font-size: 13px;" onchange="renderExternalTable()">
@@ -365,84 +320,168 @@
             </div>
         </div>
 
-        <!-- نموذج إدخال المبيعات الخارجية -->
         <div class="form-grid ext-form-grid">
-            <div class="form-group fg-date">
-                <label>التاريخ:</label>
-                <input type="date" id="extSaleDate" class="form-control">
-            </div>
-            <div class="form-group fg-inv">
-                <label>رقم الفاتورة:</label>
-                <input type="number" id="extInvoiceNo" class="form-control" placeholder="اتركه فارغاً">
-            </div>
-            <div class="form-group fg-cust">
-                <label>اسم العميل (إدخال يدوي):</label>
-                <input type="text" id="extCustomerInput" class="form-control" placeholder="اكتب اسم العميل...">
-            </div>
-            <div class="form-group fg-amt">
-                <label>المبلغ (KD):</label>
-                <input type="number" id="extSaleAmount" class="form-control" step="0.001" placeholder="0.000">
-            </div>
-            <div class="form-group fg-ret">
-                <label>المرتجع (KD):</label>
-                <input type="number" id="extReturnAmount" class="form-control" step="0.001" placeholder="0.000">
-            </div>
+            <div class="form-group fg-date"><label>التاريخ:</label><input type="date" id="extSaleDate" class="form-control"></div>
+            <div class="form-group fg-inv"><label>رقم الفاتورة:</label><input type="number" id="extInvoiceNo" class="form-control" placeholder="اتركه فارغاً"></div>
+            <div class="form-group fg-cust"><label>اسم العميل (إدخال يدوي):</label><input type="text" id="extCustomerInput" class="form-control" placeholder="اكتب اسم العميل..."></div>
+            <div class="form-group fg-amt"><label>المبلغ (KD):</label><input type="number" id="extSaleAmount" class="form-control" step="0.001" placeholder="0.000"></div>
+            <div class="form-group fg-ret"><label>المرتجع (KD):</label><input type="number" id="extReturnAmount" class="form-control" step="0.001" placeholder="0.000"></div>
             <div class="form-group fg-col">
-                <label>من قام بالتحصيل:</label>
-                <select id="extCollector" class="form-control" style="font-size:13px;">
-                    <option value="العهدة">العهدة</option>
-                    <option value="إبراهيم">إبراهيم</option>
-                    <option value="هيثم">هيثم</option>
-                    <option value="نواف">نواف</option>
-                    <option value="فاتورة آجلة">فاتورة آجلة</option>
-                </select>
+                <label>تحصيل:</label>
+                <input type="text" id="extCollector" class="form-control" value="العهدة" placeholder="ابحث عن طريقة التحصيل...">
+                <div id="extCollectorList" class="autocomplete-list"></div>
             </div>
-            <div class="form-group fg-desc">
-                <label>البيان:</label>
-                <input type="text" id="extDescription" class="form-control" placeholder="وصف / بيان الفاتورة...">
-            </div>
+            <div class="form-group fg-desc"><label>البيان:</label><input type="text" id="extDescription" class="form-control" placeholder="وصف / بيان الفاتورة..."></div>
             <button type="button" id="extSubmitBtn" class="btn btn-primary ext-submit" onclick="addExternalSaleRecord()">➕ إضافة</button>
         </div>
 
-        <!-- جدول عرض المبيعات الخارجية -->
         <table class="sales-table">
             <thead>
-                <tr>
-                    <th>#</th>
-                    <th>التاريخ</th>
-                    <th>رقم الفاتورة</th>
-                    <th>اسم العميل</th>
-                    <th>البيان</th>
-                    <th>التحصيل</th>
-                    <th>المبلغ (KD)</th>
-                    <th>المرتجع (KD)</th>
-                    <th>إجراءات</th>
-                </tr>
+                <tr><th>#</th><th>التاريخ</th><th>رقم الفاتورة</th><th>اسم العميل</th><th>البيان</th><th>التحصيل</th><th>المبلغ (KD)</th><th>المرتجع (KD)</th><th>إجراءات</th></tr>
             </thead>
             <tbody id="extTableBody"></tbody>
         </table>
 
-        <!-- ملخص المبيعات الخارجية -->
         <div class="summary-box">
             <div class="summary-item">إجمالي المبيعات الخارجية: <span class="summary-val" id="extTotalSales">0.000 KD</span></div>
-            <div class="summary-item">إجمالي المرتجعات: <span class="summary-val" id="extTotalReturns" style="color:#007bff;">0.000 KD</span></div>
-            <div class="summary-item">الصافي النهائي: <span class="summary-val" id="extNetTotal">0.000 KD</span></div>
+            <div class="summary-item">إجمالي المرتجعات: <span class="summary-val" style="color:#007bff;" id="extTotalReturns">0.000 KD</span></div>
+            <div class="summary-item">الصافي النهائي: <span class="summary-val net" id="extNetTotal">0.000 KD</span></div>
         </div>
     </div>
 
-    <!-- ================= شاشة تقرير المبيعات اليومي ================= -->
-    <div id="reportTab" class="tab-content">
+    <!-- ================= شاشة طلبات ================= -->
+    <div id="talabatTab" class="tab-content">
+        <div class="header-controls">
+            <div class="top-actions-bar">
+                <button class="btn btn-success" onclick="exportTalabatToExcel()">📊 تصدير Excel</button>
+            </div>
+            <div class="sort-box">
+                <label>فرز حسب:</label>
+                <select id="talabatSortSelect" class="form-control" style="padding: 4px 8px; font-size: 13px;" onchange="renderTalabatTable()">
+                    <option value="default">رقم الطلب: تنازلي (الافتراضي)</option>
+                    <option value="ord_asc">رقم الطلب: تصاعدي</option>
+                    <option value="date_desc">التاريخ: الأحدث أولاً</option>
+                    <option value="date_asc">التاريخ: الأقدم أولاً</option>
+                </select>
+            </div>
+        </div>
 
+        <div class="form-grid delivery-form-grid">
+            <div class="form-group"><label>التاريخ:</label><input type="date" id="talabatDate" class="form-control"></div>
+            <div class="form-group">
+                <label>رقم الطلب:</label>
+                <input type="number" id="talabatOrderNo" class="form-control" placeholder="رقم الطلب">
+                <div id="talabatOrderNoWarning" class="field-warning-msg"></div>
+            </div>
+            <div class="form-group"><label>المبلغ (KD):</label><input type="number" id="talabatAmount" class="form-control" step="0.001" placeholder="0.000"></div>
+            <div class="form-group"><label>المرتجع (KD):</label><input type="number" id="talabatReturn" class="form-control" step="0.001" placeholder="0.000"></div>
+            <div class="form-group">
+                <label>طريقة الدفع:</label>
+                <input type="text" id="talabatPayment" class="form-control" placeholder="ابحث عن طريقة الدفع...">
+                <div id="talabatPaymentList" class="autocomplete-list"></div>
+            </div>
+            <button type="button" id="talabatSubmitBtn" class="btn btn-primary" onclick="addTalabatRecord()">➕ إضافة</button>
+        </div>
+
+        <div class="commission-preview" id="talabatCommissionPreview">
+            <div class="commission-row">
+                <div>عمولة مبيعات: <span class="commission-val" id="talabatCommSales">0.000</span> KD</div>
+                <div>رسوم دفع: <span class="payment-val" id="talabatCommPay">0.000</span> KD</div>
+                <div>إجمالي العمولات: <span class="commission-val" id="talabatCommTotal">0.000</span> KD</div>
+                <div>الصافي بعد العمولات: <span class="net-val" id="talabatNetAfter">0.000</span> KD</div>
+            </div>
+        </div>
+
+        <table class="sales-table">
+            <thead>
+                <tr>
+                    <th>#</th><th>التاريخ</th><th>رقم الطلب</th><th>المبلغ (KD)</th><th>المرتجع (KD)</th>
+                    <th>طريقة الدفع</th><th>عمولة مبيعات (KD)</th><th>رسوم دفع (KD)</th><th>الصافي (KD)</th><th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="talabatTableBody"></tbody>
+        </table>
+
+        <div class="summary-box">
+            <div class="summary-item">إجمالي المبيعات: <span class="summary-val" id="talabatTotalSales">0.000 KD</span></div>
+            <div class="summary-item">إجمالي المرتجعات: <span class="summary-val" style="color:#007bff;" id="talabatTotalReturns">0.000 KD</span></div>
+            <div class="summary-item">عمولة المبيعات: <span class="summary-val commission" id="talabatTotalSalesComm">0.000 KD</span></div>
+            <div class="summary-item">رسوم الدفع: <span class="summary-val paymentfee" id="talabatTotalPayFee">0.000 KD</span></div>
+            <div class="summary-item">الصافي بعد العمولات: <span class="summary-val net" id="talabatNetTotal">0.000 KD</span></div>
+        </div>
+    </div>
+
+    <!-- ================= شاشة كيتا ================= -->
+    <div id="keetaTab" class="tab-content">
+        <div class="header-controls">
+            <div class="top-actions-bar">
+                <button class="btn btn-success" onclick="exportKeetaToExcel()">📊 تصدير Excel</button>
+            </div>
+            <div class="sort-box">
+                <label>فرز حسب:</label>
+                <select id="keetaSortSelect" class="form-control" style="padding: 4px 8px; font-size: 13px;" onchange="renderKeetaTable()">
+                    <option value="default">رقم الطلب: تنازلي (الافتراضي)</option>
+                    <option value="ord_asc">رقم الطلب: تصاعدي</option>
+                    <option value="date_desc">التاريخ: الأحدث أولاً</option>
+                    <option value="date_asc">التاريخ: الأقدم أولاً</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-grid delivery-form-grid">
+            <div class="form-group"><label>التاريخ:</label><input type="date" id="keetaDate" class="form-control"></div>
+            <div class="form-group">
+                <label>رقم الطلب:</label>
+                <input type="number" id="keetaOrderNo" class="form-control" placeholder="رقم الطلب">
+                <div id="keetaOrderNoWarning" class="field-warning-msg"></div>
+            </div>
+            <div class="form-group"><label>المبلغ (KD):</label><input type="number" id="keetaAmount" class="form-control" step="0.001" placeholder="0.000"></div>
+            <div class="form-group"><label>المرتجع (KD):</label><input type="number" id="keetaReturn" class="form-control" step="0.001" placeholder="0.000"></div>
+            <div class="form-group">
+                <label>طريقة الدفع:</label>
+                <input type="text" id="keetaPayment" class="form-control" placeholder="ابحث عن طريقة الدفع...">
+                <div id="keetaPaymentList" class="autocomplete-list"></div>
+            </div>
+            <button type="button" id="keetaSubmitBtn" class="btn btn-primary" onclick="addKeetaRecord()">➕ إضافة</button>
+        </div>
+
+        <div class="commission-preview" id="keetaCommissionPreview">
+            <div class="commission-row">
+                <div>عمولة مبيعات: <span class="commission-val" id="keetaCommSales">0.000</span> KD</div>
+                <div>رسوم دفع: <span class="payment-val" id="keetaCommPay">0.000</span> KD</div>
+                <div>إجمالي العمولات: <span class="commission-val" id="keetaCommTotal">0.000</span> KD</div>
+                <div>الصافي بعد العمولات: <span class="net-val" id="keetaNetAfter">0.000</span> KD</div>
+            </div>
+        </div>
+
+        <table class="sales-table">
+            <thead>
+                <tr>
+                    <th>#</th><th>التاريخ</th><th>رقم الطلب</th><th>المبلغ (KD)</th><th>المرتجع (KD)</th>
+                    <th>طريقة الدفع</th><th>عمولة مبيعات (KD)</th><th>رسوم دفع (KD)</th><th>الصافي (KD)</th><th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="keetaTableBody"></tbody>
+        </table>
+
+        <div class="summary-box">
+            <div class="summary-item">إجمالي المبيعات: <span class="summary-val" id="keetaTotalSales">0.000 KD</span></div>
+            <div class="summary-item">إجمالي المرتجعات: <span class="summary-val" style="color:#007bff;" id="keetaTotalReturns">0.000 KD</span></div>
+            <div class="summary-item">عمولة المبيعات: <span class="summary-val commission" id="keetaTotalSalesComm">0.000 KD</span></div>
+            <div class="summary-item">رسوم الدفع: <span class="summary-val paymentfee" id="keetaTotalPayFee">0.000 KD</span></div>
+            <div class="summary-item">الصافي بعد العمولات: <span class="summary-val net" id="keetaNetTotal">0.000 KD</span></div>
+        </div>
+    </div>
+
+    <!-- ================= تقرير المبيعات اليومي ================= -->
+    <div id="reportTab" class="tab-content">
         <div class="filters-row no-print">
-            <div class="form-group">
-                <label>من تاريخ:</label>
-                <input type="date" id="repFromDate" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>إلى تاريخ:</label>
-                <input type="date" id="repToDate" class="form-control">
-            </div>
+            <div class="form-group"><label>من تاريخ:</label><input type="date" id="repFromDate" class="form-control"></div>
+            <div class="form-group"><label>إلى تاريخ:</label><input type="date" id="repToDate" class="form-control"></div>
             <button class="btn btn-primary" style="height:38px; margin-top:0;" onclick="generateDailyReport()">🔄 تحديث التقرير</button>
+            <button class="btn btn-secondary" style="height:38px;" id="toggleCountsBtn" onclick="toggleReportCounts()">
+                <span id="toggleCountsLabel">👁️ إظهار عدد الفواتير</span>
+            </button>
             <button class="btn btn-success" style="height:38px;" onclick="printDailyReport()">🖨️ طباعة</button>
             <button class="btn btn-pdf" style="height:38px;" onclick="exportDailyReportPDF()">📄 تصدير PDF</button>
             <button class="btn btn-excel-import" style="height:38px;" onclick="exportDailyReportToExcel()">📊 تصدير Excel</button>
@@ -452,141 +491,80 @@
             <div class="report-header">
                 <div class="report-header-left">
                     <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Logo" crossorigin="anonymous">
-                    <div>
-                        <h3>FONDANT CHOCO</h3>
-                        <p>High Quality Food & Confectionery Supplies</p>
-                    </div>
+                    <div><h3>FONDANT CHOCO</h3><p>High Quality Food & Confectionery Supplies</p></div>
                 </div>
-                <div class="report-header-right">
-                    <div id="repIssueDate">Issue Date: --</div>
-                </div>
+                <div class="report-header-right"><div id="repIssueDate">Issue Date: --</div></div>
             </div>
-
-            <div class="report-title">تقرير المبيعات اليومي</div>
+            <div class="report-title">تقرير المبيعات اليومي المجمع</div>
             <div class="report-period" id="repPeriodText">للفترة من (البداية) إلى (اليوم)</div>
-
-            <table class="report-table compact">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;">#</th>
-                        <th>التاريخ</th>
-                        <th>عدد فواتير المستشفيات</th>
-                        <th>مبيعات المستشفيات (KD)</th>
-                        <th>عدد الفواتير الخارجية</th>
-                        <th>المبيعات الخارجية (KD)</th>
-                        <th>إجمالي اليوم (KD)</th>
-                    </tr>
-                </thead>
-                <tbody id="dailyReportBody"></tbody>
-                <tfoot id="dailyReportFoot"></tfoot>
-            </table>
+            <div id="dailyReportTableContainer"></div>
         </div>
     </div>
 
-    <!-- ================= شاشة تقرير المستشفيات (عملاء × أيام) ================= -->
+    <!-- ================= تقرير المستشفيات ================= -->
     <div id="matrixTab" class="tab-content">
-
         <div class="filters-row no-print">
-            <div class="form-group">
-                <label>من تاريخ:</label>
-                <input type="date" id="matFromDate" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>إلى تاريخ:</label>
-                <input type="date" id="matToDate" class="form-control">
-            </div>
+            <div class="form-group"><label>من تاريخ:</label><input type="date" id="matFromDate" class="form-control"></div>
+            <div class="form-group"><label>إلى تاريخ:</label><input type="date" id="matToDate" class="form-control"></div>
             <button class="btn btn-primary" style="height:38px; margin-top:0;" onclick="generateCustomerMatrixReport()">🔄 تحديث التقرير</button>
             <button class="btn btn-success" style="height:38px;" onclick="printMatrixReport()">🖨️ طباعة</button>
             <button class="btn btn-pdf" style="height:38px;" onclick="exportMatrixPDF()">📄 تصدير PDF</button>
             <button class="btn btn-excel-import" style="height:38px;" onclick="exportMatrixToExcel()">📊 تصدير Excel</button>
         </div>
-
         <div id="matrixReportArea" style="background:#fff; padding:15px; border-radius:8px; border:1px solid #ddd;">
             <div class="report-header">
                 <div class="report-header-left">
                     <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Logo" crossorigin="anonymous">
-                    <div>
-                        <h3>FONDANT CHOCO</h3>
-                        <p>High Quality Food & Confectionery Supplies</p>
-                    </div>
+                    <div><h3>FONDANT CHOCO</h3><p>High Quality Food & Confectionery Supplies</p></div>
                 </div>
-                <div class="report-header-right">
-                    <div id="matIssueDate">Issue Date: --</div>
-                </div>
+                <div class="report-header-right"><div id="matIssueDate">Issue Date: --</div></div>
             </div>
-
             <div class="report-title">تقرير مبيعات المستشفيات (عملاء × أيام)</div>
             <div class="report-period" id="matPeriodText">للفترة من (البداية) إلى (اليوم)</div>
-            <div class="report-period" style="font-size:11px; color:#888;">يتم تقسيم الفترة إلى صفحات، كل صفحة تحتوي على 17 يوم فقط.</div>
-
+            <div class="report-period" style="font-size:11px; color:#888;">يتم تقسيم الفترة إلى صفحات، كل صفحة تحتوي على 10 أيام فقط.</div>
             <div class="matrix-scroll" id="matrixTableWrap"></div>
         </div>
     </div>
 
 </div>
 
-<!-- ================= مودال كشف حساب المستشفيات (إنجليزي) ================= -->
+<!-- ================= مودال كشف حساب المستشفيات ================= -->
 <div class="modal-overlay" id="statementModal">
     <div class="modal-content">
         <div class="modal-header">
             <h3>Statement of Account - FONDANT CHOCO</h3>
             <button class="btn btn-danger" onclick="closeStatementModal()">Close ✖</button>
         </div>
-
         <div class="filters-row no-print">
-            <div class="form-group">
-                <label>From Date:</label>
-                <input type="date" id="stFromDate" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>To Date:</label>
-                <input type="date" id="stToDate" class="form-control">
-            </div>
+            <div class="form-group"><label>From Date:</label><input type="date" id="stFromDate" class="form-control"></div>
+            <div class="form-group"><label>To Date:</label><input type="date" id="stToDate" class="form-control"></div>
             <div class="form-group" style="flex: 1;">
                 <label>Select Customer / Branch:</label>
-                <select id="stCustomerSelect" class="form-control" style="text-align: left; direction: ltr;">
-                    <option value="ALL">-- ALL BRANCHES / CUSTOMERS --</option>
-                </select>
+                <select id="stCustomerSelect" class="form-control" style="text-align: left; direction: ltr;"><option value="ALL">-- ALL BRANCHES / CUSTOMERS --</option></select>
             </div>
             <button class="btn btn-primary" onclick="generateStatementPreview()">View Statement 👁️</button>
             <button class="btn btn-success" onclick="printStatementPDF()">🖨️ Print / Save PDF</button>
         </div>
-
         <div class="statement-print-area" id="statementPrintArea">
             <div class="st-header">
                 <div class="st-company-info">
-                    <div>
-                        <h3>FONDANT CHOCO</h3>
-                        <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Fondant Choco Logo" class="st-logo-img">
-                    </div>
+                    <div><h3>FONDANT CHOCO</h3><img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Logo" class="st-logo-img"></div>
                     <p>High Quality Food & Confectionery Supplies</p>
                 </div>
             </div>
-
             <div class="st-title-section">
                 <div class="st-client-name">BAB AL-KHAIR CO.</div>
                 <div class="st-statement-title">STATEMENT OF ACCOUNT</div>
                 <div class="st-period-subtitle" id="stPeriodText">For the Period From -- To --</div>
             </div>
-
             <div class="st-meta">
                 <span id="stCustomerLabel">Customer Branch: All Branches</span>
                 <span id="stDatePrint">Issue Date: </span>
             </div>
-
             <table class="en-table" style="margin-bottom: 12px;">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;">#</th>
-                        <th style="width: 110px;">Date</th>
-                        <th style="width: 110px;">Invoice No.</th>
-                        <th>Customer / Branch</th>
-                        <th style="width: 140px;">Invoice Amount (KD)</th>
-                    </tr>
-                </thead>
+                <thead><tr><th style="width: 40px;">#</th><th style="width: 110px;">Date</th><th style="width: 110px;">Invoice No.</th><th>Customer / Branch</th><th style="width: 140px;">Invoice Amount (KD)</th></tr></thead>
                 <tbody id="statementTableBody"></tbody>
             </table>
-
             <div style="display: flex; justify-content: flex-end; margin-bottom: 25px;">
                 <div style="width: 260px; border: 1.5px solid #222; padding: 8px 12px; border-radius: 4px; font-size: 14px; background: #fafafa;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -595,18 +573,11 @@
                     </div>
                 </div>
             </div>
-
             <div style="display: flex; justify-content: space-between; margin-top: 30px; font-size: 13px; font-weight: bold; color: #222;">
-                <div style="text-align: center;">
-                    Financial Director Signature:<br><br><br>
-                    ....................................................
-                </div>
-                <div style="text-align: center;">
-                    Company Stamp:<br><br><br><br>
-                </div>
+                <div style="text-align: center;">Financial Director Signature:<br><br><br>....................................................</div>
+                <div style="text-align: center;">Company Stamp:<br><br><br><br></div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -617,73 +588,53 @@
             <h3>كشف حساب المبيعات الخارجية - FONDANT CHOCO</h3>
             <button class="btn btn-danger" onclick="closeExtStatementModal()">إغلاق ✖</button>
         </div>
-
         <div class="filters-row no-print">
-            <div class="form-group">
-                <label>من تاريخ:</label>
-                <input type="date" id="extStFromDate" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>إلى تاريخ:</label>
-                <input type="date" id="extStToDate" class="form-control">
-            </div>
+            <div class="form-group"><label>من تاريخ:</label><input type="date" id="extStFromDate" class="form-control"></div>
+            <div class="form-group"><label>إلى تاريخ:</label><input type="date" id="extStToDate" class="form-control"></div>
             <div class="form-group" style="flex: 1;">
-                <label>المحصل:</label>
-                <select id="extStCollector" class="form-control" style="font-size:13px;">
-                    <option value="ALL">-- كل المحصلين --</option>
-                </select>
+                <label>التحصيل:</label>
+                <select id="extStCollector" class="form-control" style="font-size:13px;"><option value="ALL">-- كل المحصلين --</option></select>
             </div>
             <button class="btn btn-primary" onclick="generateExtStatementPreview()">عرض الكشف 👁️</button>
             <button class="btn btn-success" onclick="printExtStatement()">🖨️ طباعة / PDF</button>
         </div>
-
         <div class="statement-print-area" id="extStatementPrintArea" style="direction:rtl; text-align:right;">
             <div class="st-header">
                 <div class="st-company-info">
-                    <div>
-                        <h3>FONDANT CHOCO</h3>
-                        <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Fondant Choco Logo" class="st-logo-img">
-                    </div>
+                    <div><h3>FONDANT CHOCO</h3><img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Logo" class="st-logo-img"></div>
                     <p>High Quality Food & Confectionery Supplies</p>
                 </div>
             </div>
-
             <div class="st-title-section">
                 <div class="st-client-name" style="font-size:18px;">FONDANT CHOCO</div>
                 <div class="st-statement-title">كشف حساب المبيعات الخارجية</div>
                 <div class="st-period-subtitle" id="extStPeriodText">للفترة من -- إلى --</div>
             </div>
-
             <div class="st-meta">
-                <span id="extStCollectorLabel">المحصل: كل المحصلين</span>
+                <span id="extStCollectorLabel">التحصيل: كل المحصلين</span>
                 <span id="extStIssueDate">Issue Date: </span>
             </div>
-
             <table class="ext-st-table" style="margin-bottom: 10px;">
                 <thead>
                     <tr>
-                        <th style="width: 35px;">#</th>
-                        <th style="width: 90px;">التاريخ</th>
-                        <th style="width: 90px;">رقم الفاتورة</th>
-                        <th>العميل</th>
-                        <th>البيان</th>
-                        <th style="width: 90px;">التحصيل</th>
-                        <th style="width: 90px;">المبلغ (KD)</th>
-                        <th style="width: 90px;">المرتجع (KD)</th>
-                        <th style="width: 90px;">الصافي (KD)</th>
+                        <th style="width: 35px;">#</th><th style="width: 90px;">التاريخ</th><th style="width: 90px;">رقم الفاتورة</th>
+                        <th>العميل</th><th>البيان</th><th style="width: 90px;">التحصيل</th>
+                        <th style="width: 90px;">المبلغ (KD)</th><th style="width: 90px;">المرتجع (KD)</th><th style="width: 90px;">الصافي (KD)</th>
                     </tr>
                 </thead>
                 <tbody id="extStatementTableBody"></tbody>
                 <tfoot id="extStatementTableFoot"></tfoot>
             </table>
         </div>
-
     </div>
 </div>
 
 <script>
     let editId = null;
     let extEditId = null;
+    let talabatEditId = null;
+    let keetaEditId = null;
+    let showReportCounts = false;
 
     const customerMap = {
         "ADAN": "Al-Adan Hospital", "JAHRA": "Al-Jahra Hospital", "AL RAZI": "Al-Razi Hospital",
@@ -695,6 +646,51 @@
         "OMOMA": "Al Omooma Hospital", "AL OMOMA": "Al Omooma Hospital"
     };
 
+    const TALABAT_PAYMENTS = ['كاش/نقداً', 'K-Net', 'Credit Card'];
+    const KEETA_PAYMENTS = ['K-Net', 'Credit Card'];
+    const EXTERNAL_COLLECTORS = ['العهدة', 'إبراهيم', 'هيثم', 'نواف', 'فاتورة آجلة', 'U-pay'];
+
+    const COMMISSION_RATES = {
+        talabat: { cashRate: 0.07, nonCashRate: 0.17, knetFixedFee: 0.100, ccRate: 0.025 },
+        keeta: { nonCashRate: 0.17, knetFixedFee: 0.100, ccRate: 0.025 }
+    };
+
+    function calculateCommission(amount, returns, paymentMethod, platform) {
+        const amt = parseFloat(amount) || 0;
+        const ret = parseFloat(returns) || 0;
+        const result = { salesCommission: 0, paymentFee: 0, total: 0, net: amt - ret };
+        if (amt <= 0) return result;
+        const rates = COMMISSION_RATES[platform];
+        if (!rates) return result;
+        let salesComm = 0, payFee = 0;
+        if (platform === 'talabat') {
+            if (paymentMethod === 'كاش/نقداً') { salesComm = amt * rates.cashRate; }
+            else if (paymentMethod === 'K-Net') { salesComm = amt * rates.nonCashRate; payFee = rates.knetFixedFee; }
+            else if (paymentMethod === 'Credit Card') { salesComm = amt * rates.nonCashRate; payFee = amt * rates.ccRate; }
+        } else if (platform === 'keeta') {
+            if (paymentMethod === 'K-Net') { salesComm = amt * rates.nonCashRate; payFee = rates.knetFixedFee; }
+            else if (paymentMethod === 'Credit Card') { salesComm = amt * rates.nonCashRate; payFee = amt * rates.ccRate; }
+        }
+        result.salesCommission = salesComm;
+        result.paymentFee = payFee;
+        result.total = salesComm + payFee;
+        result.net = amt - ret - result.total;
+        return result;
+    }
+
+    function getRecordSalesCommission(record, platform) {
+        if (record.salesCommission !== undefined && record.salesCommission !== null && record.salesCommission !== '') {
+            return parseFloat(record.salesCommission) || 0;
+        }
+        return calculateCommission(record.amount, record.returns, record.paymentMethod, platform).salesCommission;
+    }
+    function getRecordPaymentFee(record, platform) {
+        if (record.paymentFee !== undefined && record.paymentFee !== null && record.paymentFee !== '') {
+            return parseFloat(record.paymentFee) || 0;
+        }
+        return calculateCommission(record.amount, record.returns, record.paymentMethod, platform).paymentFee;
+    }
+
     function normalizeCustomerName(rawName) {
         if (!rawName) return '';
         let clean = String(rawName).trim().toUpperCase();
@@ -702,7 +698,6 @@
         for (let key in customerMap) { if (clean === key || clean.includes(key)) return customerMap[key]; }
         return String(rawName).trim().toLowerCase().replace(/(?:^|\s|-)\w/g, function(match) { return match.toUpperCase(); });
     }
-
     function escapeHtml(str) { return String(str == null ? '' : str).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); }
     function toLocalDateStr(d) { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${dd}`; }
     function fmtCell(v) { const n = parseFloat(v); if (isNaN(n) || n === 0) return '-'; return n.toFixed(3); }
@@ -717,16 +712,145 @@
 
     document.getElementById('saleDate').value = localStorage.getItem('fondant_last_sale_date') || new Date().toISOString().split('T')[0];
     document.getElementById('extSaleDate').value = localStorage.getItem('fondant_last_external_sale_date') || new Date().toISOString().split('T')[0];
+    document.getElementById('talabatDate').value = localStorage.getItem('fondant_last_talabat_date') || new Date().toISOString().split('T')[0];
+    document.getElementById('keetaDate').value = localStorage.getItem('fondant_last_keeta_date') || new Date().toISOString().split('T')[0];
 
     let salesRecords = JSON.parse(localStorage.getItem('fondant_sales_records') || '[]').map((r, i) => ({ id: r.id || (Date.now() + i), ...r, customer: normalizeCustomerName(r.customer) }));
     let externalRecords = JSON.parse(localStorage.getItem('fondant_external_sales_records') || '[]').map((r, i) => ({ ...r, id: r.id || (Date.now() + i), description: r.description || '', collector: r.collector || '' }));
 
+    let talabatRecords = JSON.parse(localStorage.getItem('fondant_talabat_records') || '[]').map((r, i) => {
+        const record = { ...r, id: r.id || (Date.now() + i), paymentMethod: r.paymentMethod || '' };
+        const calc = calculateCommission(record.amount, record.returns, record.paymentMethod, 'talabat');
+        record.salesCommission = calc.salesCommission.toFixed(3);
+        record.paymentFee = calc.paymentFee.toFixed(3);
+        record.commission = calc.total.toFixed(3);
+        record.netAfterCommission = calc.net.toFixed(3);
+        return record;
+    });
+    if (talabatRecords.length > 0) localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
+
+    let keetaRecords = JSON.parse(localStorage.getItem('fondant_keeta_records') || '[]').map((r, i) => {
+        const record = { ...r, id: r.id || (Date.now() + i), paymentMethod: r.paymentMethod || '' };
+        const calc = calculateCommission(record.amount, record.returns, record.paymentMethod, 'keeta');
+        record.salesCommission = calc.salesCommission.toFixed(3);
+        record.paymentFee = calc.paymentFee.toFixed(3);
+        record.commission = calc.total.toFixed(3);
+        record.netAfterCommission = calc.net.toFixed(3);
+        return record;
+    });
+    if (keetaRecords.length > 0) localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+
+    // ============ Auto PDF Buttons ============
+    const TAB_TITLES = {
+        'hospitalTab': 'تقرير مبيعات المستشفيات',
+        'externalTab': 'تقرير المبيعات الخارجية اليومية',
+        'talabatTab': 'تقرير مبيعات طلبات',
+        'keetaTab': 'تقرير مبيعات كيتا'
+    };
+
+    function autoAddPdfButtons() {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            const actionsBar = tab.querySelector('.top-actions-bar');
+            if (!actionsBar) return;
+            if (actionsBar.querySelector('.btn-pdf-auto')) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-pdf btn-pdf-auto';
+            btn.innerHTML = '📄 تصدير PDF';
+            btn.onclick = () => exportTabToPDF(tab.id);
+            actionsBar.appendChild(btn);
+        });
+    }
+
+    // ✅ تصدير التبويبات (مستشفيات/خارجية/طلبات/كيتا) - رأسي + تقسيم 20 صف/صفحة + رأس متكرر
+    function exportTabToPDF(tabId) {
+        const tab = document.getElementById(tabId);
+        if (!tab) return;
+
+        const table = tab.querySelector('.sales-table');
+        if (!table) { alert('لا يوجد جدول للتصدير.'); return; }
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+        if (allRows.length === 0 || (allRows.length === 1 && allRows[0].querySelector('td[colspan]'))) {
+            alert('لا توجد بيانات للتصدير.');
+            return;
+        }
+
+        const headerHTML = (() => {
+            const clone = thead.cloneNode(true);
+            clone.querySelectorAll('tr').forEach(tr => {
+                const cells = tr.querySelectorAll('th, td');
+                if (cells.length > 0) cells[cells.length - 1].remove();
+            });
+            return clone.outerHTML;
+        })();
+
+        const rowHTMLs = allRows.map(row => {
+            const clone = row.cloneNode(true);
+            const cells = clone.querySelectorAll('th, td');
+            if (cells.length > 0) cells[cells.length - 1].remove();
+            return clone.outerHTML;
+        });
+
+        const CHUNK = 20;
+        const chunks = [];
+        for (let i = 0; i < rowHTMLs.length; i += CHUNK) {
+            chunks.push(rowHTMLs.slice(i, i + CHUNK));
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'tempPdfExport';
+        wrapper.style.cssText = 'background:#fff; padding:10px; width:100%; margin:0 auto; font-family:Arial, "Segoe UI", Tahoma, sans-serif; color:#111;';
+
+        let html = `
+            <div class="report-header">
+                <div class="report-header-left">
+                    <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Logo" crossorigin="anonymous">
+                    <div>
+                        <h3>FONDANT CHOCO</h3>
+                        <p>High Quality Food & Confectionery Supplies</p>
+                    </div>
+                </div>
+                <div class="report-header-right">
+                    <div>Issue Date: ${new Date().toLocaleDateString('en-GB')}</div>
+                </div>
+            </div>
+            <div class="report-title">${TAB_TITLES[tabId] || tabId}</div>
+        `;
+
+        chunks.forEach((chunk, idx) => {
+            const chunkClass = idx > 0 ? 'pdf-tab-chunk pdf-tab-break' : 'pdf-tab-chunk';
+            html += `<div class="${chunkClass}">
+                <table class="sales-table" style="width:100%; border-collapse:collapse; margin-top:8px;">
+                    ${headerHTML}
+                    <tbody>${chunk.join('')}</tbody>
+                </table>
+            </div>`;
+        });
+
+        const summary = tab.querySelector('.summary-box');
+        if (summary) {
+            const sc = summary.cloneNode(true);
+            html += `<div class="summary-box" style="margin-top:15px;">${sc.innerHTML}</div>`;
+        }
+
+        wrapper.innerHTML = html;
+        document.body.appendChild(wrapper);
+
+        const filename = `FondantChoco_${tabId}_${new Date().toISOString().split('T')[0]}.pdf`;
+        generatePdfFromElement('tempPdfExport', filename, 'portrait', false);
+
+        setTimeout(() => { if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper); }, 15000);
+    }
+
+    // ============ Tab Switching ============
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         document.querySelector('.tab-btn[data-tab="' + tabId + '"]').classList.add('active');
-
         if (tabId === 'reportTab') {
             if (!document.getElementById('repFromDate').value) setDefaultReportDates();
             generateDailyReport();
@@ -741,22 +865,34 @@
         document.getElementById('repFromDate').value = toLocalDateStr(firstDay);
         document.getElementById('repToDate').value = toLocalDateStr(now);
     }
-
     function setDefaultMatrixDates() {
         const now = new Date(), firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         document.getElementById('matFromDate').value = toLocalDateStr(firstDay);
         document.getElementById('matToDate').value = toLocalDateStr(now);
     }
+    function toggleReportCounts() {
+        showReportCounts = !showReportCounts;
+        const label = document.getElementById('toggleCountsLabel');
+        if (label) label.innerText = showReportCounts ? '🙈 إخفاء عدد الفواتير' : '👁️ إظهار عدد الفواتير';
+        generateDailyReport();
+    }
 
+    // ============ Backup ============
     function checkBackupReminder() {
         const lastBackup = localStorage.getItem('fondant_last_sales_backup_time'), halfHour = 30 * 60 * 1000;
         document.getElementById('backupReminderBanner').style.display = (!lastBackup || (Date.now() - parseInt(lastBackup)) > halfHour) ? 'flex' : 'none';
     }
-
     function dismissBackupReminder() { document.getElementById('backupReminderBanner').style.display = 'none'; }
 
     function exportJsonBackup() {
-        const backupData = { salesRecords, externalRecords, lastDate: localStorage.getItem('fondant_last_sale_date'), lastExternalDate: localStorage.getItem('fondant_last_external_sale_date'), backupTime: Date.now() };
+        const backupData = {
+            salesRecords, externalRecords, talabatRecords, keetaRecords,
+            lastDate: localStorage.getItem('fondant_last_sale_date'),
+            lastExternalDate: localStorage.getItem('fondant_last_external_sale_date'),
+            lastTalabatDate: localStorage.getItem('fondant_last_talabat_date'),
+            lastKeetaDate: localStorage.getItem('fondant_last_keeta_date'),
+            backupTime: Date.now()
+        };
         const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a');
         a.href = url; a.download = `FondantChoco_Sales_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
         localStorage.setItem('fondant_last_sales_backup_time', Date.now()); checkBackupReminder(); alert('تم تصدير النسخة الاحتياطية بنجاح!');
@@ -776,17 +912,45 @@
                     externalRecords = data.externalRecords.map((r, i) => ({ ...r, id: r.id || (Date.now() + i), description: r.description || '', collector: r.collector || '' }));
                     localStorage.setItem('fondant_external_sales_records', JSON.stringify(externalRecords));
                 }
+                if (data.talabatRecords && Array.isArray(data.talabatRecords)) {
+                    talabatRecords = data.talabatRecords.map((r, i) => {
+                        const rec = { ...r, id: r.id || (Date.now() + i), paymentMethod: r.paymentMethod || '' };
+                        const calc = calculateCommission(rec.amount, rec.returns, rec.paymentMethod, 'talabat');
+                        rec.salesCommission = calc.salesCommission.toFixed(3);
+                        rec.paymentFee = calc.paymentFee.toFixed(3);
+                        rec.commission = calc.total.toFixed(3);
+                        rec.netAfterCommission = calc.net.toFixed(3);
+                        return rec;
+                    });
+                    localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
+                }
+                if (data.keetaRecords && Array.isArray(data.keetaRecords)) {
+                    keetaRecords = data.keetaRecords.map((r, i) => {
+                        const rec = { ...r, id: r.id || (Date.now() + i), paymentMethod: r.paymentMethod || '' };
+                        const calc = calculateCommission(rec.amount, rec.returns, rec.paymentMethod, 'keeta');
+                        rec.salesCommission = calc.salesCommission.toFixed(3);
+                        rec.paymentFee = calc.paymentFee.toFixed(3);
+                        rec.commission = calc.total.toFixed(3);
+                        rec.netAfterCommission = calc.net.toFixed(3);
+                        return rec;
+                    });
+                    localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+                }
                 if (data.lastDate) localStorage.setItem('fondant_last_sale_date', data.lastDate);
                 if (data.lastExternalDate) localStorage.setItem('fondant_last_external_sale_date', data.lastExternalDate);
+                if (data.lastTalabatDate) localStorage.setItem('fondant_last_talabat_date', data.lastTalabatDate);
+                if (data.lastKeetaDate) localStorage.setItem('fondant_last_keeta_date', data.lastKeetaDate);
                 localStorage.setItem('fondant_last_sales_backup_time', Date.now());
-                renderSalesTable(); renderExternalTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); checkBackupReminder();
-                alert('تمت استعادة النسخة الاحتياطية بنجاح!');
+                renderSalesTable(); renderExternalTable(); renderTalabatTable(); renderKeetaTable();
+                setNextInvoiceNumber(); setNextExternalInvoiceNumber(); checkBackupReminder();
+                alert('تمت استعادة النسخة الاحتياطية وإعادة حساب العمولات بنجاح!');
             } catch (err) { alert('حدث خطأ.'); }
             event.target.value = '';
         };
         reader.readAsText(file);
     }
 
+    // ============ Excel Import ============
     function importOldExcelData(event) {
         const file = event.target.files[0]; if (!file) return;
         const shouldClear = confirm("هل تريد مسح البيانات الحالية واستبدالها بالكامل؟");
@@ -862,7 +1026,6 @@
         }
         return strDate;
     }
-
     function getRowValue(row, possibleKeys) {
         const rowKeys = Object.keys(row);
         for (let key of possibleKeys) {
@@ -875,18 +1038,59 @@
     function getNextInvoiceSerial() {
         let maxNum = 4317; [...salesRecords, ...externalRecords].forEach(r => { const n = parseInt(r.invoiceNo); if (!isNaN(n) && n > maxNum) maxNum = n; }); return maxNum + 1;
     }
-
     function checkDuplicateInvoice(invoiceNo, currentEditId, currentEditType) {
         if (invoiceNo === "" || invoiceNo === "-") return false;
         for (let r of salesRecords) { if (r.invoiceNo === invoiceNo) { if (currentEditType === 'hospital' && r.id === currentEditId) continue; return true; } }
         for (let r of externalRecords) { if (r.invoiceNo === invoiceNo) { if (currentEditType === 'external' && r.id === currentEditId) continue; return true; } }
         return false;
     }
-
+    function checkDuplicateOrderNo(orderNo, currentEditId, platform) {
+        if (orderNo === "" || orderNo === "-") return false;
+        const records = platform === 'talabat' ? talabatRecords : keetaRecords;
+        for (let r of records) { if (r.orderNo === orderNo) { if (r.id === currentEditId) continue; return true; } }
+        return false;
+    }
     function setNextInvoiceNumber() { if (editId !== null) return; document.getElementById('invoiceNo').value = getNextInvoiceSerial(); }
     function setNextExternalInvoiceNumber() { if (extEditId !== null) return; document.getElementById('extInvoiceNo').value = getNextInvoiceSerial(); }
     setNextInvoiceNumber(); setNextExternalInvoiceNumber();
 
+    // ============ Live Duplicate Check ============
+    function checkOrderNoInput(inputEl, platform, editId) {
+        const val = inputEl.value.trim();
+        const warningEl = document.getElementById(inputEl.id + 'Warning');
+        if (!val) {
+            inputEl.classList.remove('duplicate-warning');
+            if (warningEl) { warningEl.style.display = 'none'; warningEl.innerText = ''; }
+            return;
+        }
+        const isDup = checkDuplicateOrderNo(val, editId, platform);
+        if (isDup) {
+            inputEl.classList.add('duplicate-warning');
+            if (warningEl) {
+                warningEl.style.display = 'block';
+                warningEl.innerText = `⚠️ رقم الطلب (${val}) مسجل مسبقاً في ${platform === 'talabat' ? 'طلبات' : 'كيتا'}!`;
+            }
+        } else {
+            inputEl.classList.remove('duplicate-warning');
+            if (warningEl) { warningEl.style.display = 'none'; warningEl.innerText = ''; }
+        }
+    }
+
+    document.getElementById('talabatOrderNo').addEventListener('input', function() {
+        checkOrderNoInput(this, 'talabat', talabatEditId);
+    });
+    document.getElementById('keetaOrderNo').addEventListener('input', function() {
+        checkOrderNoInput(this, 'keeta', keetaEditId);
+    });
+
+    function clearOrderNoWarning(inputId) {
+        const inputEl = document.getElementById(inputId);
+        const warningEl = document.getElementById(inputId + 'Warning');
+        if (inputEl) { inputEl.classList.remove('duplicate-warning'); inputEl.value = ''; }
+        if (warningEl) { warningEl.style.display = 'none'; warningEl.innerText = ''; }
+    }
+
+    // ============ Autocompletes ============
     const customerInput = document.getElementById('customerInput'), customerList = document.getElementById('customerList');
     function selectCustomer(name) { customerInput.value = name; customerList.style.display = 'none'; document.getElementById('saleAmount').focus(); }
     customerInput.addEventListener('input', function() {
@@ -899,6 +1103,66 @@
         } else customerList.style.display = 'none';
     });
 
+    function setupAutocomplete(inputId, listId, options, platform) {
+        const input = document.getElementById(inputId), list = document.getElementById(listId);
+        if (!input || !list) return;
+        function renderList() {
+            const val = input.value.toLowerCase().trim();
+            list.innerHTML = '';
+            if (!val) { list.style.display = 'none'; return; }
+            const matches = options.filter(o => o.toLowerCase().includes(val));
+            if (matches.length) {
+                matches.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.innerText = m;
+                    div.onmousedown = function(e) {
+                        e.preventDefault();
+                        input.value = m;
+                        list.style.display = 'none';
+                        if (platform) updateCommissionPreview(platform);
+                    };
+                    list.appendChild(div);
+                });
+                list.style.display = 'block';
+            } else list.style.display = 'none';
+        }
+        input.addEventListener('input', function() {
+            renderList();
+            if (platform) updateCommissionPreview(platform);
+        });
+        input.addEventListener('focus', function() { renderList(); });
+        input.addEventListener('blur', function() { setTimeout(() => { list.style.display = 'none'; }, 200); });
+    }
+    setupAutocomplete('talabatPayment', 'talabatPaymentList', TALABAT_PAYMENTS, 'talabat');
+    setupAutocomplete('keetaPayment', 'keetaPaymentList', KEETA_PAYMENTS, 'keeta');
+    setupAutocomplete('extCollector', 'extCollectorList', EXTERNAL_COLLECTORS, null);
+
+    function updateCommissionPreview(platform) {
+        const prefix = platform;
+        const amt = parseFloat(document.getElementById(prefix + 'Amount').value) || 0;
+        const ret = parseFloat(document.getElementById(prefix + 'Return').value) || 0;
+        const pm = document.getElementById(prefix + 'Payment').value.trim();
+        const preview = document.getElementById(prefix + 'CommissionPreview');
+        if (!preview) return;
+        if (!pm || amt <= 0) { preview.style.display = 'none'; return; }
+        const calc = calculateCommission(amt, ret, pm, platform);
+        document.getElementById(prefix + 'CommSales').innerText = calc.salesCommission.toFixed(3);
+        document.getElementById(prefix + 'CommPay').innerText = calc.paymentFee.toFixed(3);
+        document.getElementById(prefix + 'CommTotal').innerText = calc.total.toFixed(3);
+        document.getElementById(prefix + 'NetAfter').innerText = calc.net.toFixed(3);
+        preview.style.display = 'block';
+    }
+    ['talabatAmount', 'talabatReturn', 'talabatPayment'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.addEventListener('input', () => updateCommissionPreview('talabat')); el.addEventListener('change', () => updateCommissionPreview('talabat')); }
+    });
+    ['keetaAmount', 'keetaReturn', 'keetaPayment'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.addEventListener('input', () => updateCommissionPreview('keeta')); el.addEventListener('change', () => updateCommissionPreview('keeta')); }
+    });
+
+    // ============ Keyboard navigation ============
     const formFields = ['saleDate', 'invoiceNo', 'customerInput', 'saleAmount', 'returnAmount'];
     formFields.forEach((id, index) => {
         const field = document.getElementById(id);
@@ -914,19 +1178,38 @@
             }
         });
     });
-
     const extFormFields = ['extSaleDate', 'extInvoiceNo', 'extCustomerInput', 'extSaleAmount', 'extReturnAmount', 'extCollector', 'extDescription'];
     extFormFields.forEach((id, index) => {
         const field = document.getElementById(id); if (!field) return;
         field.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
+                if (id === 'extCollector') {
+                    const list = document.getElementById('extCollectorList');
+                    const firstItem = list ? list.querySelector('.autocomplete-item') : null;
+                    if (list && list.style.display === 'block' && firstItem) { field.value = firstItem.innerText; list.style.display = 'none'; document.getElementById('extDescription').focus(); return; }
+                }
                 if (index < extFormFields.length - 1) { const nextEl = document.getElementById(extFormFields[index + 1]); if (nextEl) nextEl.focus(); }
                 else addExternalSaleRecord();
             }
         });
     });
+    const talabatFields = ['talabatDate', 'talabatOrderNo', 'talabatAmount', 'talabatReturn', 'talabatPayment'];
+    talabatFields.forEach((id, index) => {
+        const field = document.getElementById(id); if (!field) return;
+        field.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); if (index < talabatFields.length - 1) { document.getElementById(talabatFields[index + 1]).focus(); } else addTalabatRecord(); }
+        });
+    });
+    const keetaFields = ['keetaDate', 'keetaOrderNo', 'keetaAmount', 'keetaReturn', 'keetaPayment'];
+    keetaFields.forEach((id, index) => {
+        const field = document.getElementById(id); if (!field) return;
+        field.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); if (index < keetaFields.length - 1) { document.getElementById(keetaFields[index + 1]).focus(); } else addKeetaRecord(); }
+        });
+    });
 
+    // ============ Hospital CRUD ============
     function renderSalesTable() {
         const tbody = document.getElementById('salesTableBody'); tbody.innerHTML = ''; let sumSales = 0, sumReturns = 0;
         let recordsToDisplay = [...salesRecords];
@@ -946,8 +1229,10 @@
                 row.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(record.date)}</td><td><b>${escapeHtml(record.invoiceNo || '-')}</b></td><td>${escapeHtml(record.customer || '-')}</td><td>${fmtCell(amount)}</td><td style="color: #007bff;">${fmtCell(ret)}</td><td><button class="btn btn-edit" onclick="editSale(${record.id})">تعديل ✏️</button><button class="btn btn-danger" onclick="deleteSale(${record.id})">حذف 🗑️</button></td>`;
             });
         }
-        document.getElementById('totalSales').innerText = sumSales.toFixed(3) + ' KD'; document.getElementById('totalReturns').innerText = sumReturns.toFixed(3) + ' KD';
-        document.getElementById('netTotal').innerText = (sumSales - sumReturns).toFixed(3) + ' KD'; generateDailyReport();
+        document.getElementById('totalSales').innerText = sumSales.toFixed(3) + ' KD';
+        document.getElementById('totalReturns').innerText = sumReturns.toFixed(3) + ' KD';
+        document.getElementById('netTotal').innerText = (sumSales - sumReturns).toFixed(3) + ' KD';
+        generateDailyReport();
     }
 
     function addSaleRecord() {
@@ -993,6 +1278,7 @@
         XLSX.writeFile(workbook, `FondantChoco_Sales_${new Date().toISOString().split('T')[0]}.xlsx`);
     }
 
+    // ============ External CRUD ============
     function renderExternalTable() {
         const tbody = document.getElementById('extTableBody'); tbody.innerHTML = ''; let sumSales = 0, sumReturns = 0;
         let recordsToDisplay = [...externalRecords];
@@ -1012,14 +1298,16 @@
                 row.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(record.date)}</td><td><b>${escapeHtml(record.invoiceNo || '-')}</b></td><td>${escapeHtml(record.customer || '-')}</td><td class="desc-cell">${record.description ? escapeHtml(record.description) : '-'}</td><td class="collector-cell">${record.collector ? escapeHtml(record.collector) : '-'}</td><td>${fmtCell(amount)}</td><td style="color: #007bff;">${fmtCell(ret)}</td><td><button class="btn btn-edit" onclick="editExternalSale(${record.id})">تعديل ✏️</button><button class="btn btn-danger" onclick="deleteExternalSale(${record.id})">حذف 🗑️</button></td>`;
             });
         }
-        document.getElementById('extTotalSales').innerText = sumSales.toFixed(3) + ' KD'; document.getElementById('extTotalReturns').innerText = sumReturns.toFixed(3) + ' KD';
-        document.getElementById('extNetTotal').innerText = (sumSales - sumReturns).toFixed(3) + ' KD'; generateDailyReport();
+        document.getElementById('extTotalSales').innerText = sumSales.toFixed(3) + ' KD';
+        document.getElementById('extTotalReturns').innerText = sumReturns.toFixed(3) + ' KD';
+        document.getElementById('extNetTotal').innerText = (sumSales - sumReturns).toFixed(3) + ' KD';
+        generateDailyReport();
     }
 
     function addExternalSaleRecord() {
         const date = document.getElementById('extSaleDate').value, invoiceNo = document.getElementById('extInvoiceNo').value.trim();
         const customerRaw = document.getElementById('extCustomerInput').value.trim(), amountRaw = document.getElementById('extSaleAmount').value.trim();
-        const returnsRaw = document.getElementById('extReturnAmount').value.trim(), description = document.getElementById('extDescription').value.trim(), collector = document.getElementById('extCollector').value;
+        const returnsRaw = document.getElementById('extReturnAmount').value.trim(), description = document.getElementById('extDescription').value.trim(), collector = document.getElementById('extCollector').value.trim();
         if (!date) { alert('أدخل التاريخ.'); return; } if (!customerRaw) { alert('أدخل اسم العميل.'); document.getElementById('extCustomerInput').focus(); return; }
         if (invoiceNo !== "" && invoiceNo !== "-" && checkDuplicateInvoice(invoiceNo, extEditId, 'external')) { alert(`⚠️ رقم الفاتورة (${invoiceNo}) مسجل!`); document.getElementById('extInvoiceNo').focus(); return; }
         const amountVal = parseFloat(amountRaw) || 0, returnsVal = parseFloat(returnsRaw) || 0;
@@ -1060,52 +1348,344 @@
         XLSX.writeFile(workbook, `FondantChoco_External_Sales_${new Date().toISOString().split('T')[0]}.xlsx`);
     }
 
+    // ============ Talabat CRUD ============
+    function renderTalabatTable() {
+        const tbody = document.getElementById('talabatTableBody'); tbody.innerHTML = '';
+        let sumSales = 0, sumReturns = 0, sumSalesComm = 0, sumPayFee = 0, sumNet = 0;
+        let recordsToDisplay = [...talabatRecords];
+        const sortVal = document.getElementById('talabatSortSelect').value;
+        if (sortVal === 'default' || sortVal === 'ord_desc') {
+            recordsToDisplay.sort((a, b) => (parseInt(b.orderNo) || 0) - (parseInt(a.orderNo) || 0));
+        } else if (sortVal === 'ord_asc') {
+            recordsToDisplay.sort((a, b) => (parseInt(a.orderNo) || 0) - (parseInt(b.orderNo) || 0));
+        } else if (sortVal === 'date_desc') {
+            recordsToDisplay.sort((a, b) => new Date(b.date) - new Date(a.date));
+        } else if (sortVal === 'date_asc') {
+            recordsToDisplay.sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+
+        if (recordsToDisplay.length === 0) tbody.innerHTML = '<tr><td colspan="10" style="color: #777;">لا توجد مبيعات طلبات.</td></tr>';
+        else {
+            recordsToDisplay.forEach((record, index) => {
+                const amount = parseFloat(record.amount) || 0, ret = parseFloat(record.returns) || 0;
+                const salesComm = getRecordSalesCommission(record, 'talabat');
+                const payFee = getRecordPaymentFee(record, 'talabat');
+                const net = amount - ret - salesComm - payFee;
+                sumSales += amount; sumReturns += ret; sumSalesComm += salesComm; sumPayFee += payFee; sumNet += net;
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(record.date)}</td><td><b>${escapeHtml(record.orderNo || '-')}</b></td><td>${fmtCell(amount)}</td><td style="color: #007bff;">${fmtCell(ret)}</td><td class="payment-cell">${record.paymentMethod ? escapeHtml(record.paymentMethod) : '-'}</td><td class="commission-cell">${fmtCell(salesComm)}</td><td class="paymentfee-cell">${fmtCell(payFee)}</td><td class="net-cell">${fmtCell(net)}</td><td><button class="btn btn-edit" onclick="editTalabat(${record.id})">تعديل ✏️</button><button class="btn btn-danger" onclick="deleteTalabat(${record.id})">حذف 🗑️</button></td>`;
+            });
+        }
+        document.getElementById('talabatTotalSales').innerText = sumSales.toFixed(3) + ' KD';
+        document.getElementById('talabatTotalReturns').innerText = sumReturns.toFixed(3) + ' KD';
+        document.getElementById('talabatTotalSalesComm').innerText = sumSalesComm.toFixed(3) + ' KD';
+        document.getElementById('talabatTotalPayFee').innerText = sumPayFee.toFixed(3) + ' KD';
+        document.getElementById('talabatNetTotal').innerText = sumNet.toFixed(3) + ' KD';
+        generateDailyReport();
+    }
+
+    function addTalabatRecord() {
+        const date = document.getElementById('talabatDate').value, orderNo = document.getElementById('talabatOrderNo').value.trim();
+        const amountRaw = document.getElementById('talabatAmount').value.trim(), returnsRaw = document.getElementById('talabatReturn').value.trim();
+        const paymentMethod = document.getElementById('talabatPayment').value.trim();
+        if (!date) { alert('أدخل التاريخ.'); return; }
+        if (!paymentMethod) { alert('أدخل طريقة الدفع.'); document.getElementById('talabatPayment').focus(); return; }
+        if (orderNo !== "" && checkDuplicateOrderNo(orderNo, talabatEditId, 'talabat')) { alert(`⚠️ رقم الطلب (${orderNo}) مسجل مسبقاً في طلبات!`); document.getElementById('talabatOrderNo').focus(); return; }
+        const amountVal = parseFloat(amountRaw) || 0, returnsVal = parseFloat(returnsRaw) || 0;
+        if (amountVal <= 0 && returnsVal <= 0) { alert('أدخل مبلغ أو مرتجع.'); return; }
+        const calc = calculateCommission(amountVal, returnsVal, paymentMethod, 'talabat');
+        localStorage.setItem('fondant_last_talabat_date', date);
+        const newRecord = {
+            date, orderNo: orderNo !== "" ? orderNo : "-",
+            amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3),
+            paymentMethod,
+            salesCommission: calc.salesCommission.toFixed(3),
+            paymentFee: calc.paymentFee.toFixed(3),
+            commission: calc.total.toFixed(3),
+            netAfterCommission: calc.net.toFixed(3)
+        };
+        if (talabatEditId !== null) {
+            const idx = talabatRecords.findIndex(r => r.id === talabatEditId);
+            if (idx !== -1) talabatRecords[idx] = { id: talabatEditId, ...newRecord };
+            talabatEditId = null; document.getElementById('talabatSubmitBtn').innerText = '➕ إضافة'; document.getElementById('talabatSubmitBtn').className = 'btn btn-primary';
+        } else {
+            talabatRecords.unshift({ id: Date.now() + Math.random(), ...newRecord });
+        }
+        localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
+        renderTalabatTable();
+        document.getElementById('talabatAmount').value = ''; document.getElementById('talabatReturn').value = ''; document.getElementById('talabatPayment').value = '';
+        clearOrderNoWarning('talabatOrderNo');
+        document.getElementById('talabatCommissionPreview').style.display = 'none';
+        document.getElementById('talabatOrderNo').focus();
+    }
+
+    function editTalabat(id) {
+        const record = talabatRecords.find(r => r.id === id); if (!record) return;
+        talabatEditId = id; document.getElementById('talabatDate').value = record.date; document.getElementById('talabatOrderNo').value = record.orderNo === '-' ? '' : record.orderNo;
+        document.getElementById('talabatAmount').value = record.amount; document.getElementById('talabatReturn').value = record.returns; document.getElementById('talabatPayment').value = record.paymentMethod || '';
+        document.getElementById('talabatSubmitBtn').innerText = '💾 تحديث'; document.getElementById('talabatSubmitBtn').className = 'btn btn-warning';
+        updateCommissionPreview('talabat');
+        checkOrderNoInput(document.getElementById('talabatOrderNo'), 'talabat', id);
+        document.getElementById('talabatPayment').focus();
+    }
+
+    function deleteTalabat(id) {
+        if (confirm('هل أنت متأكد من الحذف؟')) {
+            const idx = talabatRecords.findIndex(r => r.id === id); if (idx !== -1) talabatRecords.splice(idx, 1);
+            if (talabatEditId === id) { talabatEditId = null; document.getElementById('talabatSubmitBtn').innerText = '➕ إضافة'; document.getElementById('talabatSubmitBtn').className = 'btn btn-primary'; }
+            localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords)); renderTalabatTable();
+        }
+    }
+
+    function exportTalabatToExcel() {
+        if (talabatRecords.length === 0) { alert('لا توجد بيانات.'); return; }
+        const excelData = talabatRecords.map((r, i) => {
+            const sc = getRecordSalesCommission(r, 'talabat'), pf = getRecordPaymentFee(r, 'talabat');
+            return {
+                "م": i + 1, "التاريخ": r.date, "رقم الطلب": r.orderNo,
+                "المبلغ (KD)": parseFloat(r.amount), "المرتجع (KD)": parseFloat(r.returns),
+                "طريقة الدفع": r.paymentMethod || '',
+                "عمولة مبيعات (KD)": parseFloat(sc.toFixed(3)),
+                "رسوم دفع (KD)": parseFloat(pf.toFixed(3)),
+                "إجمالي العمولة (KD)": parseFloat((sc + pf).toFixed(3)),
+                "الصافي (KD)": parseFloat((parseFloat(r.amount) - parseFloat(r.returns) - sc - pf).toFixed(3))
+            };
+        });
+        const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "طلبات");
+        XLSX.writeFile(workbook, `FondantChoco_Talabat_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    // ============ Keeta CRUD ============
+    function renderKeetaTable() {
+        const tbody = document.getElementById('keetaTableBody'); tbody.innerHTML = '';
+        let sumSales = 0, sumReturns = 0, sumSalesComm = 0, sumPayFee = 0, sumNet = 0;
+        let recordsToDisplay = [...keetaRecords];
+        const sortVal = document.getElementById('keetaSortSelect').value;
+        if (sortVal === 'default' || sortVal === 'ord_desc') {
+            recordsToDisplay.sort((a, b) => (parseInt(b.orderNo) || 0) - (parseInt(a.orderNo) || 0));
+        } else if (sortVal === 'ord_asc') {
+            recordsToDisplay.sort((a, b) => (parseInt(a.orderNo) || 0) - (parseInt(b.orderNo) || 0));
+        } else if (sortVal === 'date_desc') {
+            recordsToDisplay.sort((a, b) => new Date(b.date) - new Date(a.date));
+        } else if (sortVal === 'date_asc') {
+            recordsToDisplay.sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+
+        if (recordsToDisplay.length === 0) tbody.innerHTML = '<tr><td colspan="10" style="color: #777;">لا توجد مبيعات كيتا.</td></tr>';
+        else {
+            recordsToDisplay.forEach((record, index) => {
+                const amount = parseFloat(record.amount) || 0, ret = parseFloat(record.returns) || 0;
+                const salesComm = getRecordSalesCommission(record, 'keeta');
+                const payFee = getRecordPaymentFee(record, 'keeta');
+                const net = amount - ret - salesComm - payFee;
+                sumSales += amount; sumReturns += ret; sumSalesComm += salesComm; sumPayFee += payFee; sumNet += net;
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(record.date)}</td><td><b>${escapeHtml(record.orderNo || '-')}</b></td><td>${fmtCell(amount)}</td><td style="color: #007bff;">${fmtCell(ret)}</td><td class="payment-cell">${record.paymentMethod ? escapeHtml(record.paymentMethod) : '-'}</td><td class="commission-cell">${fmtCell(salesComm)}</td><td class="paymentfee-cell">${fmtCell(payFee)}</td><td class="net-cell">${fmtCell(net)}</td><td><button class="btn btn-edit" onclick="editKeeta(${record.id})">تعديل ✏️</button><button class="btn btn-danger" onclick="deleteKeeta(${record.id})">حذف 🗑️</button></td>`;
+            });
+        }
+        document.getElementById('keetaTotalSales').innerText = sumSales.toFixed(3) + ' KD';
+        document.getElementById('keetaTotalReturns').innerText = sumReturns.toFixed(3) + ' KD';
+        document.getElementById('keetaTotalSalesComm').innerText = sumSalesComm.toFixed(3) + ' KD';
+        document.getElementById('keetaTotalPayFee').innerText = sumPayFee.toFixed(3) + ' KD';
+        document.getElementById('keetaNetTotal').innerText = sumNet.toFixed(3) + ' KD';
+        generateDailyReport();
+    }
+
+    function addKeetaRecord() {
+        const date = document.getElementById('keetaDate').value, orderNo = document.getElementById('keetaOrderNo').value.trim();
+        const amountRaw = document.getElementById('keetaAmount').value.trim(), returnsRaw = document.getElementById('keetaReturn').value.trim();
+        const paymentMethod = document.getElementById('keetaPayment').value.trim();
+        if (!date) { alert('أدخل التاريخ.'); return; }
+        if (!paymentMethod) { alert('أدخل طريقة الدفع.'); document.getElementById('keetaPayment').focus(); return; }
+        if (paymentMethod !== 'K-Net' && paymentMethod !== 'Credit Card') { alert('طريقة الدفع في كيتا يجب أن تكون K-Net أو Credit Card فقط.'); document.getElementById('keetaPayment').focus(); return; }
+        if (orderNo !== "" && checkDuplicateOrderNo(orderNo, keetaEditId, 'keeta')) { alert(`⚠️ رقم الطلب (${orderNo}) مسجل مسبقاً في كيتا!`); document.getElementById('keetaOrderNo').focus(); return; }
+        const amountVal = parseFloat(amountRaw) || 0, returnsVal = parseFloat(returnsRaw) || 0;
+        if (amountVal <= 0 && returnsVal <= 0) { alert('أدخل مبلغ أو مرتجع.'); return; }
+        const calc = calculateCommission(amountVal, returnsVal, paymentMethod, 'keeta');
+        localStorage.setItem('fondant_last_keeta_date', date);
+        const newRecord = {
+            date, orderNo: orderNo !== "" ? orderNo : "-",
+            amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3),
+            paymentMethod,
+            salesCommission: calc.salesCommission.toFixed(3),
+            paymentFee: calc.paymentFee.toFixed(3),
+            commission: calc.total.toFixed(3),
+            netAfterCommission: calc.net.toFixed(3)
+        };
+        if (keetaEditId !== null) {
+            const idx = keetaRecords.findIndex(r => r.id === keetaEditId);
+            if (idx !== -1) keetaRecords[idx] = { id: keetaEditId, ...newRecord };
+            keetaEditId = null; document.getElementById('keetaSubmitBtn').innerText = '➕ إضافة'; document.getElementById('keetaSubmitBtn').className = 'btn btn-primary';
+        } else {
+            keetaRecords.unshift({ id: Date.now() + Math.random(), ...newRecord });
+        }
+        localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+        renderKeetaTable();
+        document.getElementById('keetaAmount').value = ''; document.getElementById('keetaReturn').value = ''; document.getElementById('keetaPayment').value = '';
+        clearOrderNoWarning('keetaOrderNo');
+        document.getElementById('keetaCommissionPreview').style.display = 'none';
+        document.getElementById('keetaOrderNo').focus();
+    }
+
+    function editKeeta(id) {
+        const record = keetaRecords.find(r => r.id === id); if (!record) return;
+        keetaEditId = id; document.getElementById('keetaDate').value = record.date; document.getElementById('keetaOrderNo').value = record.orderNo === '-' ? '' : record.orderNo;
+        document.getElementById('keetaAmount').value = record.amount; document.getElementById('keetaReturn').value = record.returns; document.getElementById('keetaPayment').value = record.paymentMethod || '';
+        document.getElementById('keetaSubmitBtn').innerText = '💾 تحديث'; document.getElementById('keetaSubmitBtn').className = 'btn btn-warning';
+        updateCommissionPreview('keeta');
+        checkOrderNoInput(document.getElementById('keetaOrderNo'), 'keeta', id);
+        document.getElementById('keetaPayment').focus();
+    }
+
+    function deleteKeeta(id) {
+        if (confirm('هل أنت متأكد من الحذف؟')) {
+            const idx = keetaRecords.findIndex(r => r.id === id); if (idx !== -1) keetaRecords.splice(idx, 1);
+            if (keetaEditId === id) { keetaEditId = null; document.getElementById('keetaSubmitBtn').innerText = '➕ إضافة'; document.getElementById('keetaSubmitBtn').className = 'btn btn-primary'; }
+            localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords)); renderKeetaTable();
+        }
+    }
+
+    function exportKeetaToExcel() {
+        if (keetaRecords.length === 0) { alert('لا توجد بيانات.'); return; }
+        const excelData = keetaRecords.map((r, i) => {
+            const sc = getRecordSalesCommission(r, 'keeta'), pf = getRecordPaymentFee(r, 'keeta');
+            return {
+                "م": i + 1, "التاريخ": r.date, "رقم الطلب": r.orderNo,
+                "المبلغ (KD)": parseFloat(r.amount), "المرتجع (KD)": parseFloat(r.returns),
+                "طريقة الدفع": r.paymentMethod || '',
+                "عمولة مبيعات (KD)": parseFloat(sc.toFixed(3)),
+                "رسوم دفع (KD)": parseFloat(pf.toFixed(3)),
+                "إجمالي العمولة (KD)": parseFloat((sc + pf).toFixed(3)),
+                "الصافي (KD)": parseFloat((parseFloat(r.amount) - parseFloat(r.returns) - sc - pf).toFixed(3))
+            };
+        });
+        const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "كيتا");
+        XLSX.writeFile(workbook, `FondantChoco_Keeta_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    // ============ Daily Report ============
     function buildDailyReportData() {
         const from = document.getElementById('repFromDate').value, to = document.getElementById('repToDate').value, days = {};
         const addRec = (r, type) => {
             if (!r.date || (from && r.date < from) || (to && r.date > to)) return;
-            if (!days[r.date]) days[r.date] = { hCount: 0, hSales: 0, eCount: 0, eSales: 0 };
+            if (!days[r.date]) days[r.date] = {
+                hCount: 0, hSales: 0,
+                eCount: 0, eSales: 0,
+                tCount: 0, tNet: 0,
+                kCount: 0, kNet: 0
+            };
             const amt = parseFloat(r.amount) || 0;
-            if (type === 'h') { days[r.date].hCount += 1; days[r.date].hSales += amt; } else { days[r.date].eCount += 1; days[r.date].eSales += amt; }
+            const ret = parseFloat(r.returns) || 0;
+            if (type === 'h') { days[r.date].hCount += 1; days[r.date].hSales += amt; }
+            else if (type === 'e') { days[r.date].eCount += 1; days[r.date].eSales += amt; }
+            else if (type === 't') {
+                days[r.date].tCount += 1;
+                const sc = getRecordSalesCommission(r, 'talabat');
+                const pf = getRecordPaymentFee(r, 'talabat');
+                days[r.date].tNet += (amt - ret - sc - pf);
+            }
+            else if (type === 'k') {
+                days[r.date].kCount += 1;
+                const sc = getRecordSalesCommission(r, 'keeta');
+                const pf = getRecordPaymentFee(r, 'keeta');
+                days[r.date].kNet += (amt - ret - sc - pf);
+            }
         };
-        salesRecords.forEach(r => addRec(r, 'h')); externalRecords.forEach(r => addRec(r, 'e'));
-        const sortedDates = Object.keys(days).sort(), totals = { hCount: 0, hSales: 0, eCount: 0, eSales: 0 };
-        sortedDates.forEach(d => { totals.hCount += days[d].hCount; totals.hSales += days[d].hSales; totals.eCount += days[d].eCount; totals.eSales += days[d].eSales; });
+        salesRecords.forEach(r => addRec(r, 'h'));
+        externalRecords.forEach(r => addRec(r, 'e'));
+        talabatRecords.forEach(r => addRec(r, 't'));
+        keetaRecords.forEach(r => addRec(r, 'k'));
+        const sortedDates = Object.keys(days).sort();
+        const totals = { hCount: 0, hSales: 0, eCount: 0, eSales: 0, tCount: 0, tNet: 0, kCount: 0, kNet: 0 };
+        sortedDates.forEach(d => {
+            totals.hCount += days[d].hCount; totals.hSales += days[d].hSales;
+            totals.eCount += days[d].eCount; totals.eSales += days[d].eSales;
+            totals.tCount += days[d].tCount; totals.tNet += days[d].tNet;
+            totals.kCount += days[d].kCount; totals.kNet += days[d].kNet;
+        });
         return { from, to, days, sortedDates, totals };
+    }
+
+    function buildDailyReportTableHTML(data) {
+        const { days, sortedDates, totals } = data;
+        let html = '<table class="report-table compact"><thead><tr>';
+        html += '<th style="width: 30px;">#</th><th style="min-width: 80px;">التاريخ</th>';
+        if (showReportCounts) html += '<th>عدد مستشفيات</th>';
+        html += '<th>مبيعات المستشفيات (KD)</th>';
+        if (showReportCounts) html += '<th>عدد خارجية</th>';
+        html += '<th>مبيعات خارجية (KD)</th>';
+        if (showReportCounts) html += '<th>عدد طلبات</th>';
+        html += '<th>صافي مبيعات طلبات (KD)</th>';
+        if (showReportCounts) html += '<th>عدد كيتا</th>';
+        html += '<th>صافي مبيعات كيتا (KD)</th>';
+        html += '<th>إجمالي اليوم (KD)</th>';
+        html += '</tr></thead><tbody>';
+
+        if (sortedDates.length === 0) {
+            const colspan = showReportCounts ? 11 : 7;
+            html += `<tr><td colspan="${colspan}" style="color:#777; padding:10px;">لا توجد مبيعات.</td></tr>`;
+        } else {
+            sortedDates.forEach((d, i) => {
+                const v = days[d];
+                const dayTotal = v.hSales + v.eSales + v.tNet + v.kNet;
+                html += '<tr>';
+                html += `<td>${i + 1}</td>`;
+                html += `<td><b>${escapeHtml(d)}</b></td>`;
+                if (showReportCounts) html += `<td>${v.hCount}</td>`;
+                html += `<td>${fmtCell(v.hSales)}</td>`;
+                if (showReportCounts) html += `<td>${v.eCount}</td>`;
+                html += `<td>${fmtCell(v.eSales)}</td>`;
+                if (showReportCounts) html += `<td>${v.tCount}</td>`;
+                html += `<td style="color:#0d47a1; font-weight:bold;">${fmtCell(v.tNet)}</td>`;
+                if (showReportCounts) html += `<td>${v.kCount}</td>`;
+                html += `<td style="color:#0d47a1; font-weight:bold;">${fmtCell(v.kNet)}</td>`;
+                html += `<td style="font-weight:bold; color:#d32f2f;">${fmtCell(dayTotal)}</td>`;
+                html += '</tr>';
+            });
+        }
+
+        html += '</tbody><tfoot>';
+        const grandTotal = totals.hSales + totals.eSales + totals.tNet + totals.kNet;
+        html += '<tr>';
+        html += `<td colspan="2">الإجمالي العام</td>`;
+        if (showReportCounts) html += `<td>${totals.hCount}</td>`;
+        html += `<td>${fmtCell(totals.hSales)}</td>`;
+        if (showReportCounts) html += `<td>${totals.eCount}</td>`;
+        html += `<td>${fmtCell(totals.eSales)}</td>`;
+        if (showReportCounts) html += `<td>${totals.tCount}</td>`;
+        html += `<td style="color:#0d47a1;">${fmtCell(totals.tNet)}</td>`;
+        if (showReportCounts) html += `<td>${totals.kCount}</td>`;
+        html += `<td style="color:#0d47a1;">${fmtCell(totals.kNet)}</td>`;
+        html += `<td style="color:#d32f2f;">${fmtCell(grandTotal)}</td>`;
+        html += '</tr></tfoot></table>';
+        return html;
     }
 
     function generateDailyReport() {
         const fromEl = document.getElementById('repFromDate'), toEl = document.getElementById('repToDate');
         if (!fromEl.value || !toEl.value) setDefaultReportDates();
-        const { from, to, days, sortedDates, totals } = buildDailyReportData();
-        const tbody = document.getElementById('dailyReportBody'), tfoot = document.getElementById('dailyReportFoot');
-        tbody.innerHTML = ''; tfoot.innerHTML = '';
-        document.getElementById('repPeriodText').innerText = `للفترة من (${from || 'البداية'}) إلى (${to || 'اليوم'})`;
+        const data = buildDailyReportData();
+        document.getElementById('repPeriodText').innerText = `للفترة من (${data.from || 'البداية'}) إلى (${data.to || 'اليوم'})`;
         document.getElementById('repIssueDate').innerText = 'Issue Date: ' + new Date().toLocaleDateString('en-GB');
-        if (sortedDates.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="color:#777; padding:10px;">لا توجد مبيعات.</td></tr>'; return; }
-        sortedDates.forEach((d, i) => {
-            const v = days[d], tr = tbody.insertRow();
-            tr.innerHTML = `<td>${i + 1}</td><td><b>${escapeHtml(d)}</b></td><td>${v.hCount}</td><td>${fmtCell(v.hSales)}</td><td>${v.eCount}</td><td>${fmtCell(v.eSales)}</td><td style="font-weight:bold; color:#d32f2f;">${fmtCell(v.hSales + v.eSales)}</td>`;
-        });
-        tfoot.innerHTML = `<tr><td colspan="2">الإجمالي العام</td><td>${totals.hCount}</td><td>${fmtCell(totals.hSales)}</td><td>${totals.eCount}</td><td>${fmtCell(totals.eSales)}</td><td style="color:#d32f2f;">${fmtCell(totals.hSales + totals.eSales)}</td></tr>`;
+        const container = document.getElementById('dailyReportTableContainer');
+        if (container) container.innerHTML = buildDailyReportTableHTML(data);
     }
 
     function printDailyReport() {
         const content = document.getElementById('dailyReportArea').innerHTML;
-        const win = window.open('', '', 'height=700,width=900');
+        const win = window.open('', '', 'height=700,width=1200');
         win.document.write('<html dir="rtl" lang="ar"><head><title>تقرير المبيعات اليومي - FONDANT CHOCO</title>');
-        win.document.write('<style>body { font-family: "Segoe UI", Arial, sans-serif; direction: rtl; padding: 10px; color: #111; } .report-header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #222; padding-bottom:6px; margin-bottom:8px; } .report-header-left { display:flex; align-items:center; gap:10px; } .report-header-left img { height:38px; object-fit:contain; } .report-header-left h3 { margin:0; font-size:16px; font-weight:800; } .report-header-left p { margin:0; font-size:10px; color:#555; } .report-header-right { text-align:left; font-size:11px; color:#555; font-weight:bold; } .report-title { text-align:center; font-size: 16px; font-weight: 800; margin-bottom: 2px; } .report-period { text-align:center; font-size: 11px; color:#555; margin-bottom: 6px; font-weight: bold; } .report-table { width:100%; border-collapse: collapse; font-size: 10px; } .report-table th, .report-table td { border: 1px solid #333; padding: 2px 3px; text-align: center; line-height:1.1; } .report-table th { background:#343a40; color:#fff; } .report-table tfoot td { background:#e9ecef; font-weight:bold; } @media print { body { padding: 0; } }</style></head><body>');
+        win.document.write('<style>@page { size: A4 portrait; margin: 5mm; } body { font-family: "Segoe UI", Arial, sans-serif; direction: rtl; padding: 10px; color: #111; } .report-header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #222; padding-bottom:6px; margin-bottom:8px; } .report-header-left { display:flex; align-items:center; gap:10px; } .report-header-left img { height:38px; object-fit:contain; } .report-header-left h3 { margin:0; font-size:16px; font-weight:800; } .report-header-left p { margin:0; font-size:10px; color:#555; } .report-header-right { text-align:left; font-size:11px; color:#555; font-weight:bold; } .report-title { text-align:center; font-size: 16px; font-weight: 800; margin-bottom: 2px; } .report-period { text-align:center; font-size: 11px; color:#555; margin-bottom: 6px; font-weight: bold; } .report-table { width:100%; border-collapse: collapse; font-size: 9px; } .report-table th, .report-table td { border: 1px solid #333; padding: 3px 3px; text-align: center; line-height:1.15; } .report-table th { background:#343a40; color:#fff; } .report-table tfoot td { background:#e9ecef; font-weight:bold; } @media print { body { padding: 0; } }</style></head><body>');
         win.document.write(content); win.document.write('</body></html>'); win.document.close(); win.focus();
         setTimeout(() => { win.print(); win.close(); }, 500);
     }
 
-    // دالة تصدير الـ PDF (مع تحسين الفصل بين الصفحات ومنع التداخل)
-    function generatePdfFromElement(elementId, filename, orientation = 'landscape') {
+    // ✅ المحرك الأساسي لتصدير PDF — يدعم العربي النقي + تكرار الرأس + تقسيم صفحات آمن
+    // orientation: 'portrait' (افتراضي) أو 'landscape'
+    // isMatrix: true فقط للمصفوفة (عملاء × أيام) لضبط السلوك الخاص بها
+    function generatePdfFromElement(elementId, filename, orientation = 'portrait', isMatrix = false) {
         const originalElement = document.getElementById(elementId);
         if (!originalElement) return;
-
-        const btn = event && event.target ? event.target : null;
-        if (btn) { btn.disabled = true; btn.innerText = '⏳ جاري التصدير...'; }
 
         const iframe = document.createElement('iframe');
         iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
@@ -1115,66 +1695,205 @@
         const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
         let styleHTML = ''; styles.forEach(s => { styleHTML += s.outerHTML; });
 
-        // إضافة أنماط خاصة لضمان عدم قطع الجداول وعدم تداخل النصوص وإصلاح الحروف
+        const extraCSS = isMatrix ? `
+            .matrix-scroll { overflow: visible !important; }
+            .matrix-page { page-break-inside: auto !important; break-inside: auto !important; margin-bottom: 15px !important; }
+            .matrix-page-break { page-break-before: always !important; break-before: page !important; }
+            .matrix-page-title { display: block !important; clear: both !important; padding: 6px !important; font-size: 11px !important; }
+            .total-col, .totals-row td { direction: rtl !important; text-align: center !important; font-family: Arial, 'Segoe UI', Tahoma, sans-serif !important; }
+            .totals-row td:first-child { text-align: right !important; direction: rtl !important; }
+            table.matrix-table { font-size: 7.5px !important; width: 100% !important; }
+            table.matrix-table th, table.matrix-table td { padding: 1.5px 2px !important; line-height: 1.15 !important; }
+            table.matrix-table thead { display: table-header-group; }
+            table.matrix-table tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+            table.matrix-table td.cust-name { word-break: keep-all !important; overflow-wrap: normal !important; white-space: normal !important; hyphens: none !important; }
+        ` : `
+            .pdf-tab-chunk { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .pdf-tab-break { page-break-before: always !important; break-before: page !important; }
+            .sales-table { font-size: 8.5px !important; width: 100% !important; }
+            .sales-table th { font-size: 8px !important; padding: 3px 2px !important; }
+            .sales-table td { padding: 3px 2px !important; }
+            .report-table { font-size: 8.5px !important; width: 100% !important; }
+            .report-table th { font-size: 8px !important; padding: 2px 2px !important; }
+            .report-table td { padding: 2px 2px !important; }
+            table.sales-table thead, table.report-table thead { display: table-header-group; }
+            table.sales-table tr, table.report-table tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+        `;
+
         doc.open();
         doc.write(`<html dir="rtl" lang="ar"><head><meta charset="UTF-8">${styleHTML}
         <style>
-            body { background: white; padding: 10px; }
-            .matrix-scroll { overflow: visible !important; }
-            .matrix-page { 
-                page-break-inside: avoid !important; 
-                break-inside: avoid !important; 
-                margin-bottom: 20px !important;
+            /* ✅ إصلاحات عربية شاملة */
+            * {
+                font-family: Arial, 'Segoe UI', Tahoma, sans-serif !important;
+                letter-spacing: 0 !important;
+                word-spacing: normal !important;
+                text-rendering: optimizeLegibility !important;
             }
-            .matrix-page-break { page-break-before: always !important; break-before: page !important; }
-            .matrix-page-title { display: block !important; clear: both !important; padding: 8px !important; }
-            .total-col, .totals-row td { direction: rtl !important; text-align: center !important; font-family: 'Segoe UI', Tahoma, sans-serif !important; }
-            .totals-row td:first-child { text-align: right !important; direction: rtl !important; }
+            body { background: white; padding: 10px; color: #111; }
+            td, th, div, span, p, h1, h2, h3 {
+                font-family: Arial, 'Segoe UI', Tahoma, sans-serif !important;
+                direction: rtl;
+                unicode-bidi: embed;
+            }
+            td, th {
+                word-break: keep-all !important;
+                overflow-wrap: normal !important;
+                word-wrap: normal !important;
+                white-space: normal !important;
+                hyphens: none !important;
+            }
+            /* الرؤوس والعناوين لا تنقسم */
+            .report-header, .report-title, .report-period { page-break-after: avoid !important; }
+            .summary-box { page-break-inside: avoid !important; break-inside: avoid !important; }
+
+            ${extraCSS}
             @page { margin: 0; }
         </style></head><body></body></html>`);
         doc.close();
 
         const clone = originalElement.cloneNode(true);
         clone.querySelectorAll('.matrix-scroll').forEach(el => { el.style.overflow = 'visible'; el.style.width = '100%'; });
-        clone.style.width = '1100px'; clone.style.margin = '0 auto';
+        clone.style.width = orientation === 'portrait' ? '780px' : '1100px';
+        clone.style.margin = '0 auto';
+        clone.style.background = '#fff';
         doc.body.appendChild(clone);
 
-        setTimeout(() => {
+        const renderPdf = () => {
             const opt = {
-                margin: [5, 5, 5, 5],
+                margin: [4, 4, 4, 4],
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' },
+                html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: orientation },
-                pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.matrix-page'] }
+                pagebreak: {
+                    mode: ['css', 'legacy'],
+                    avoid: isMatrix ? ['tr'] : ['tr', '.pdf-tab-chunk', '.summary-box', 'thead']
+                }
             };
 
             html2pdf().set(opt).from(doc.body).save().then(() => {
-                document.body.removeChild(iframe);
-                if (btn) { btn.disabled = false; btn.innerText = '📄 تصدير PDF'; }
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
             }).catch((err) => {
-                console.error(err); document.body.removeChild(iframe); alert('حدث خطأ أثناء تصدير PDF.');
-                if (btn) { btn.disabled = false; btn.innerText = '📄 تصدير PDF'; }
+                console.error(err);
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                alert('حدث خطأ أثناء تصدير PDF.');
             });
-        }, 300);
+        };
+
+        // ✅ انتظار تحميل الخطوط قبل الرسم (إصلاح جذري لمشكلة العربي المتفرق)
+        try {
+            if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.fonts && iframe.contentWindow.document.fonts.ready) {
+                iframe.contentWindow.document.fonts.ready.then(() => {
+                    setTimeout(renderPdf, 250);
+                }).catch(() => {
+                    setTimeout(renderPdf, 800);
+                });
+            } else {
+                setTimeout(renderPdf, 1000);
+            }
+        } catch (e) {
+            setTimeout(renderPdf, 1000);
+        }
     }
 
+    // ✅ تصدير التقرير اليومي — رأسي + تكرار الرأس عبر chunking
     function exportDailyReportPDF() {
         generateDailyReport();
-        // التغيير هنا: جعل التقرير اليومي أفقي (landscape) ليظهر بشكل كامل
-        generatePdfFromElement('dailyReportArea', `FondantChoco_Daily_Report_${new Date().toISOString().split('T')[0]}.pdf`, 'landscape');
+
+        const container = document.getElementById('dailyReportTableContainer');
+        const table = container ? container.querySelector('.report-table') : null;
+
+        // لو ما فيه جدول أو ما فيه بيانات → fallback
+        if (!table || table.querySelector('td[colspan]')) {
+            generatePdfFromElement('dailyReportArea', `FondantChoco_Daily_Report_${new Date().toISOString().split('T')[0]}.pdf`, 'portrait', false);
+            return;
+        }
+
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        const tfoot = table.querySelector('tfoot');
+        const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+        if (allRows.length === 0) {
+            generatePdfFromElement('dailyReportArea', `FondantChoco_Daily_Report_${new Date().toISOString().split('T')[0]}.pdf`, 'portrait', false);
+            return;
+        }
+
+        const headerHTML = thead ? thead.outerHTML : '';
+        const footHTML = tfoot ? tfoot.outerHTML : '';
+        const rowHTMLs = allRows.map(r => r.outerHTML);
+
+        const CHUNK = 25;
+        const chunks = [];
+        for (let i = 0; i < rowHTMLs.length; i += CHUNK) chunks.push(rowHTMLs.slice(i, i + CHUNK));
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'tempPdfExport';
+        wrapper.style.cssText = 'background:#fff; padding:10px; width:100%; font-family:Arial, "Segoe UI", Tahoma, sans-serif; color:#111;';
+
+        let html = `
+            <div class="report-header">
+                <div class="report-header-left">
+                    <img src="https://i.postimg.cc/vZzRXMgJ/fondantchoco.jpg" alt="Logo" crossorigin="anonymous">
+                    <div><h3>FONDANT CHOCO</h3><p>High Quality Food & Confectionery Supplies</p></div>
+                </div>
+                <div class="report-header-right"><div>Issue Date: ${new Date().toLocaleDateString('en-GB')}</div></div>
+            </div>
+            <div class="report-title">تقرير المبيعات اليومي المجمع</div>
+            <div class="report-period">${document.getElementById('repPeriodText').innerText}</div>
+        `;
+
+        chunks.forEach((chunk, idx) => {
+            const isFirst = idx === 0;
+            const isLast = idx === chunks.length - 1;
+            const chunkClass = isFirst ? 'pdf-tab-chunk' : 'pdf-tab-chunk pdf-tab-break';
+            html += `<div class="${chunkClass}">
+                <table class="report-table compact">
+                    ${headerHTML}
+                    <tbody>${chunk.join('')}</tbody>
+                    ${isLast ? footHTML : ''}
+                </table>
+            </div>`;
+        });
+
+        wrapper.innerHTML = html;
+        document.body.appendChild(wrapper);
+
+        const filename = `FondantChoco_Daily_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        generatePdfFromElement('tempPdfExport', filename, 'portrait', false);
+
+        setTimeout(() => { if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper); }, 15000);
     }
 
     function exportDailyReportToExcel() {
         const { days, sortedDates, totals } = buildDailyReportData();
         if (sortedDates.length === 0) { alert('لا توجد بيانات.'); return; }
-        const data = sortedDates.map((d, i) => ({ "م": i + 1, "التاريخ": d, "عدد فواتير المستشفيات": days[d].hCount, "مبيعات المستشفيات (KD)": parseFloat(days[d].hSales.toFixed(3)), "عدد الفواتير الخارجية": days[d].eCount, "المبيعات الخارجية (KD)": parseFloat(days[d].eSales.toFixed(3)), "إجمالي اليوم (KD)": parseFloat((days[d].hSales + days[d].eSales).toFixed(3)) }));
-        data.push({ "م": "", "التاريخ": "الإجمالي العام", "عدد فواتير المستشفيات": totals.hCount, "مبيعات المستشفيات (KD)": parseFloat(totals.hSales.toFixed(3)), "عدد الفواتير الخارجية": totals.eCount, "المبيعات الخارجية (KD)": parseFloat(totals.eSales.toFixed(3)), "إجمالي اليوم (KD)": parseFloat((totals.hSales + totals.eSales).toFixed(3)) });
+        const data = sortedDates.map((d, i) => {
+            const v = days[d];
+            return {
+                "م": i + 1, "التاريخ": d,
+                "عدد فواتير المستشفيات": v.hCount, "مبيعات المستشفيات (KD)": parseFloat(v.hSales.toFixed(3)),
+                "عدد الفواتير الخارجية": v.eCount, "المبيعات الخارجية (KD)": parseFloat(v.eSales.toFixed(3)),
+                "عدد طلبات": v.tCount, "صافي مبيعات طلبات (KD)": parseFloat(v.tNet.toFixed(3)),
+                "عدد كيتا": v.kCount, "صافي مبيعات كيتا (KD)": parseFloat(v.kNet.toFixed(3)),
+                "إجمالي اليوم (KD)": parseFloat((v.hSales + v.eSales + v.tNet + v.kNet).toFixed(3))
+            };
+        });
+        const grandTotal = totals.hSales + totals.eSales + totals.tNet + totals.kNet;
+        data.push({
+            "م": "", "التاريخ": "الإجمالي العام",
+            "عدد فواتير المستشفيات": totals.hCount, "مبيعات المستشفيات (KD)": parseFloat(totals.hSales.toFixed(3)),
+            "عدد الفواتير الخارجية": totals.eCount, "المبيعات الخارجية (KD)": parseFloat(totals.eSales.toFixed(3)),
+            "عدد طلبات": totals.tCount, "صافي مبيعات طلبات (KD)": parseFloat(totals.tNet.toFixed(3)),
+            "عدد كيتا": totals.kCount, "صافي مبيعات كيتا (KD)": parseFloat(totals.kNet.toFixed(3)),
+            "إجمالي اليوم (KD)": parseFloat(grandTotal.toFixed(3))
+        });
         const worksheet = XLSX.utils.json_to_sheet(data); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "تقرير المبيعات اليومي");
         XLSX.writeFile(workbook, `FondantChoco_Daily_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
     }
 
-    /* ================= تقرير المستشفيات (عملاء × أيام) ================= */
+    // ============ Matrix Report ============
     function buildMatrixData() {
         const from = document.getElementById('matFromDate').value, to = document.getElementById('matToDate').value, dates = [];
         if (from && to && from <= to) { let cur = new Date(from + 'T00:00:00'), end = new Date(to + 'T00:00:00'); while (cur <= end) { dates.push(toLocalDateStr(cur)); cur.setDate(cur.getDate() + 1); } }
@@ -1198,12 +1917,12 @@
         const { dates, map, customers } = buildMatrixData();
         periodEl.innerText = `للفترة من (${from}) إلى (${to})`; issueEl.innerText = 'Issue Date: ' + new Date().toLocaleDateString('en-GB');
         if (dates.length === 0) { wrap.innerHTML = '<div style="padding:15px; color:#777;">لا توجد أيام.</div>'; return; }
-
         const grandByCust = {}; customers.forEach(c => { grandByCust[c] = 0; });
         let grandAll = 0;
         customers.forEach(c => { dates.forEach(d => { grandByCust[c] += (map[c] && map[c][d]) ? map[c][d] : 0; }); grandAll += grandByCust[c]; });
 
-        const CHUNK = 17, chunks = [];
+        // ✅ CHUNK=10 لضمان احتواء كل الأعمدة في A4 عمودي
+        const CHUNK = 10, chunks = [];
         for (let i = 0; i < dates.length; i += CHUNK) chunks.push(dates.slice(i, i + CHUNK));
 
         let html = '';
@@ -1212,15 +1931,12 @@
             const startD = chunkDates[0], endD = chunkDates[chunkDates.length - 1];
 
             html += `<div class="matrix-page${isFirst ? '' : ' matrix-page-break'}">`;
-            
-            // فصل اسم الشركة عن باقي العنوان لمنع التداخل
             html += `<div class="matrix-page-title">
                         <div class="title-company">FONDANT CHOCO</div>
                         <div>الجزء ${pageNum} من ${chunks.length} — من ${startD} إلى ${endD} (${chunkDates.length} يوم)</div>
                      </div>`;
-                     
             html += '<table class="matrix-table">';
-            html += '<colgroup><col style="width: 140px;">'; chunkDates.forEach(() => html += '<col>'); html += '<col style="width: 60px;"></colgroup>';
+            html += '<colgroup><col style="width: 130px;">'; chunkDates.forEach(() => html += '<col>'); html += '<col style="width: 55px;"></colgroup>';
             html += '<thead><tr><th class="cust-name">اسم العميل</th>';
             chunkDates.forEach(d => { const p = d.split('-'); html += `<th title="${d}">${p[2]}/${p[1]}</th>`; });
             html += '<th class="total-col">الإجمالي</th></tr></thead><tbody>';
@@ -1236,11 +1952,9 @@
                     html += `<td class="total-col">${grandByCust[c] > 0 ? grandByCust[c].toFixed(3) : '-'}</td>`;
                     html += '</tr>';
                 });
-                html += `<tr class="totals-row">`;
-                html += '<td class="cust-name">الإجمالي</td>';
+                html += `<tr class="totals-row"><td class="cust-name">الإجمالي</td>`;
                 chunkDates.forEach(d => { html += `<td>${colTotals[d] > 0 ? colTotals[d].toFixed(3) : '-'}</td>`; });
-                html += `<td class="total-col">${grandAll > 0 ? grandAll.toFixed(3) : '-'}</td>`;
-                html += '</tr>';
+                html += `<td class="total-col">${grandAll > 0 ? grandAll.toFixed(3) : '-'}</td></tr>`;
             }
             html += '</tbody></table></div>';
         });
@@ -1252,14 +1966,15 @@
         const content = document.getElementById('matrixReportArea').innerHTML;
         const win = window.open('', '', 'height=700,width=1000');
         win.document.write('<html dir="rtl" lang="ar"><head><title>تقرير المستشفيات - FONDANT CHOCO</title>');
-        win.document.write('<style>@page { size: A4 landscape; margin: 5mm; } body { font-family: "Segoe UI", Arial, sans-serif; direction: rtl; padding: 4px; color: #111; } .report-header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #222; padding-bottom:4px; margin-bottom:5px; } .report-header-left { display:flex; align-items:center; gap:8px; } .report-header-left img { height:32px; object-fit:contain; } .report-header-left h3 { margin:0; font-size:14px; font-weight:800; } .report-header-left p { margin:0; font-size:9px; color:#555; } .report-header-right { text-align:left; font-size:10px; color:#555; font-weight:bold; } .report-title { text-align:center; font-size: 13px; font-weight: 800; margin-bottom: 1px; } .report-period { text-align:center; font-size: 10px; color:#555; margin-bottom: 3px; font-weight: bold; } .matrix-page { margin-bottom: 0; } .matrix-page.matrix-page-break { page-break-before: always; } .matrix-page-title { font-size: 9px; font-weight:bold; color:#222; margin-bottom: 2px; text-align:center; background:#eef2f5; padding: 2px; border:1px solid #ccc; } .matrix-table { border-collapse: collapse; font-size: 8px; width: 100%; direction: ltr; table-layout: fixed; } .matrix-table th, .matrix-table td { border: 1px solid #777; padding: 1px 2px; text-align: center; line-height: 1.1; } .matrix-table th { background:#343a40; color:#fff; font-weight:bold; padding: 1.5px 2px; } .matrix-table td.cust-name { text-align: left !important; direction: ltr; font-weight:bold; background:#f1f3f5; white-space:normal; word-wrap:break-word; padding-left:4px; } .matrix-table th.cust-name { text-align: left !important; direction: ltr; padding-left:4px; } .matrix-table .total-col { font-weight:bold; color:#d32f2f; background:#fff5f5; direction:rtl; } .matrix-table tr.totals-row td { background:#e9ecef; font-weight:bold; border-top:2px solid #333; } .matrix-table tr.totals-row td:first-child { direction:rtl; text-align:right; } .matrix-table tr.totals-row td.total-col { background:#ffe0e0; color:#b71c1c; } tr { page-break-inside: avoid; } @media print { body { padding: 0; } }</style></head><body>');
+        win.document.write('<style>@page { size: A4 portrait; margin: 5mm; } body { font-family: "Segoe UI", Arial, sans-serif; direction: rtl; padding: 4px; color: #111; } .report-header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #222; padding-bottom:4px; margin-bottom:5px; } .report-header-left { display:flex; align-items:center; gap:8px; } .report-header-left img { height:32px; object-fit:contain; } .report-header-left h3 { margin:0; font-size:14px; font-weight:800; } .report-header-left p { margin:0; font-size:9px; color:#555; } .report-header-right { text-align:left; font-size:10px; color:#555; font-weight:bold; } .report-title { text-align:center; font-size: 13px; font-weight: 800; margin-bottom: 1px; } .report-period { text-align:center; font-size: 10px; color:#555; margin-bottom: 3px; font-weight: bold; } .matrix-page { margin-bottom: 0; page-break-inside: auto; } .matrix-page.matrix-page-break { page-break-before: always; } .matrix-page-title { font-size: 9px; font-weight:bold; color:#222; margin-bottom: 2px; text-align:center; background:#eef2f5; padding: 2px; border:1px solid #ccc; } .matrix-table { border-collapse: collapse; font-size: 8px; width: 100%; direction: ltr; table-layout: fixed; } .matrix-table th, .matrix-table td { border: 1px solid #777; padding: 1px 2px; text-align: center; line-height: 1.1; } .matrix-table th { background:#343a40; color:#fff; font-weight:bold; padding: 1.5px 2px; } .matrix-table td.cust-name { text-align: left !important; direction: ltr; font-weight:bold; background:#f1f3f5; white-space:normal; word-wrap:break-word; padding-left:4px; } .matrix-table th.cust-name { text-align: left !important; direction: ltr; padding-left:4px; } .matrix-table .total-col { font-weight:bold; color:#d32f2f; background:#fff5f5; direction:rtl; } .matrix-table tr.totals-row td { background:#e9ecef; font-weight:bold; border-top:2px solid #333; } .matrix-table tr.totals-row td:first-child { direction:rtl; text-align:right; } .matrix-table tr.totals-row td.total-col { background:#ffe0e0; color:#b71c1c; } table.matrix-table thead { display: table-header-group; } table.matrix-table tr { page-break-inside: avoid; } @media print { body { padding: 0; } }</style></head><body>');
         win.document.write(content); win.document.write('</body></html>'); win.document.close(); win.focus();
         setTimeout(() => { win.print(); win.close(); }, 500);
     }
 
     function exportMatrixPDF() {
         generateCustomerMatrixReport();
-        generatePdfFromElement('matrixReportArea', `FondantChoco_Hospital_Matrix_${new Date().toISOString().split('T')[0]}.pdf`, 'landscape');
+        // ✅ portrait + isMatrix=true لضبط CSS الخاص بالمصفوفة
+        generatePdfFromElement('matrixReportArea', `FondantChoco_Hospital_Matrix_${new Date().toISOString().split('T')[0]}.pdf`, 'portrait', true);
     }
 
     function exportMatrixToExcel() {
@@ -1277,7 +1992,7 @@
         XLSX.writeFile(workbook, `FondantChoco_Hospital_Matrix_${new Date().toISOString().split('T')[0]}.xlsx`);
     }
 
-    /* ================= كشف حساب المستشفيات ================= */
+    // ============ Statement Modals ============
     function openStatementModal() {
         const stCustSelect = document.getElementById('stCustomerSelect');
         stCustSelect.innerHTML = '<option value="ALL">-- ALL BRANCHES / CUSTOMERS --</option>';
@@ -1287,7 +2002,6 @@
         document.getElementById('stFromDate').value = toLocalDateStr(firstDay); document.getElementById('stToDate').value = toLocalDateStr(now);
         generateStatementPreview(); document.getElementById('statementModal').style.display = 'flex';
     }
-
     function closeStatementModal() { document.getElementById('statementModal').style.display = 'none'; }
 
     function generateStatementPreview() {
@@ -1319,24 +2033,21 @@
         setTimeout(() => { win.print(); win.close(); }, 500);
     }
 
-    /* ================= كشف حساب المبيعات الخارجية ================= */
     function openExtStatementModal() {
         const sel = document.getElementById('extStCollector'); sel.innerHTML = '<option value="ALL">-- كل المحصلين --</option>';
-        const baseCollectors = ['العهدة', 'إبراهيم', 'هيثم', 'نواف', 'فاتورة آجلة'];
-        const collectors = [...baseCollectors];
+        const collectors = [...EXTERNAL_COLLECTORS];
         externalRecords.forEach(r => { if (r.collector && !collectors.includes(r.collector)) collectors.push(r.collector); });
         collectors.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt); });
         const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth(), 1);
         document.getElementById('extStFromDate').value = toLocalDateStr(first); document.getElementById('extStToDate').value = toLocalDateStr(now);
         generateExtStatementPreview(); document.getElementById('extStatementModal').style.display = 'flex';
     }
-
     function closeExtStatementModal() { document.getElementById('extStatementModal').style.display = 'none'; }
 
     function generateExtStatementPreview() {
         const from = document.getElementById('extStFromDate').value, to = document.getElementById('extStToDate').value, collector = document.getElementById('extStCollector').value;
         document.getElementById('extStPeriodText').innerText = `للفترة من (${from || 'البداية'}) إلى (${to || 'اليوم'})`;
-        document.getElementById('extStCollectorLabel').innerText = `المحصل: ${collector === 'ALL' ? 'كل المحصلين' : collector}`;
+        document.getElementById('extStCollectorLabel').innerText = `التحصيل: ${collector === 'ALL' ? 'كل المحصلين' : collector}`;
         document.getElementById('extStIssueDate').innerText = 'Issue Date: ' + new Date().toLocaleDateString('en-GB');
         let filtered = externalRecords.filter(r => {
             if (from && r.date && r.date < from) return false; if (to && r.date && r.date > to) return false;
@@ -1362,10 +2073,12 @@
         setTimeout(() => { win.print(); win.close(); }, 500);
     }
 
-    /* ================= التشغيل الأولي ================= */
+    // ============ Init ============
     checkBackupReminder(); setInterval(checkBackupReminder, 60000);
     setDefaultReportDates(); setDefaultMatrixDates();
-    renderSalesTable(); renderExternalTable(); generateDailyReport(); generateCustomerMatrixReport();
+    renderSalesTable(); renderExternalTable(); renderTalabatTable(); renderKeetaTable();
+    generateDailyReport(); generateCustomerMatrixReport();
+    autoAddPdfButtons();
 </script>
 
 </body>

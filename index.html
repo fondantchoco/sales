@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FONDANT CHOCO - سجل تسجيل ومتابعة المبيعات</title>
+    
+    <!-- مكتبات Excel و PDF -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
+    <!-- مكتبات Firebase (Core & Firestore) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #eef2f5; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; display: flex; justify-content: center; color: #111; flex-direction: column; align-items: center; }
@@ -212,7 +219,6 @@
         .en-table th { background: #222; color: #fff; font-weight: bold; padding: 5px 6px; }
         .en-table tr:nth-child(even) { background: #f9f9f9; }
 
-        /* PDF export chunking classes */
         .pdf-tab-chunk { page-break-inside: avoid; break-inside: avoid; }
         .pdf-tab-break { page-break-before: always; break-before: page; }
     </style>
@@ -630,6 +636,41 @@
 </div>
 
 <script>
+    // ================= FIREBASE INITIALIZATION =================
+    const firebaseConfig = {
+        apiKey: "AIzaSyCcN2gYUBeWv9PiR7nYHIfQyCjjzJK-HJk",
+        authDomain: "fchoco-sales.firebaseapp.com",
+        projectId: "fchoco-sales",
+        storageBucket: "fchoco-sales.firebasestorage.app",
+        messagingSenderId: "882460851379",
+        appId: "1:882460851379:web:ec70eb74a6f5eda3fbc4c6",
+        measurementId: "G-FC450VXBP7"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // تفعيل التخزين المؤقت للعمل بدون إنترنت
+    db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+        console.log("Persistence note:", err.code);
+    });
+
+    // دوال المزامنة السحابية العامة
+    function syncToCloud(collectionName, record) {
+        if (!record || !record.id) return;
+        record.updatedAt = Date.now();
+        db.collection(collectionName).doc(String(record.id)).set(record, { merge: true })
+            .catch(err => console.error(`Error syncing to ${collectionName}:`, err));
+    }
+
+    function deleteFromCloud(collectionName, id) {
+        if (!id) return;
+        db.collection(collectionName).doc(String(id)).delete()
+            .catch(err => console.error(`Error deleting from ${collectionName}:`, err));
+    }
+
     let editId = null;
     let extEditId = null;
     let talabatEditId = null;
@@ -715,6 +756,7 @@
     document.getElementById('talabatDate').value = localStorage.getItem('fondant_last_talabat_date') || new Date().toISOString().split('T')[0];
     document.getElementById('keetaDate').value = localStorage.getItem('fondant_last_keeta_date') || new Date().toISOString().split('T')[0];
 
+    // تهيئة البيانات محلياً من التخزين المحلي كبداية سريعة لحين وصول بيانات السحابة
     let salesRecords = JSON.parse(localStorage.getItem('fondant_sales_records') || '[]').map((r, i) => ({ id: r.id || (Date.now() + i), ...r, customer: normalizeCustomerName(r.customer) }));
     let externalRecords = JSON.parse(localStorage.getItem('fondant_external_sales_records') || '[]').map((r, i) => ({ ...r, id: r.id || (Date.now() + i), description: r.description || '', collector: r.collector || '' }));
 
@@ -727,7 +769,6 @@
         record.netAfterCommission = calc.net.toFixed(3);
         return record;
     });
-    if (talabatRecords.length > 0) localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
 
     let keetaRecords = JSON.parse(localStorage.getItem('fondant_keeta_records') || '[]').map((r, i) => {
         const record = { ...r, id: r.id || (Date.now() + i), paymentMethod: r.paymentMethod || '' };
@@ -738,7 +779,91 @@
         record.netAfterCommission = calc.net.toFixed(3);
         return record;
     });
-    if (keetaRecords.length > 0) localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+
+    // ================= REAL-TIME CLOUD LISTENERS =================
+    function initCloudListeners() {
+        // 1. مبيعات المستشفيات
+        db.collection("hospital_sales").onSnapshot((snapshot) => {
+            let changed = false;
+            snapshot.docChanges().forEach((change) => {
+                const data = change.doc.data();
+                const idx = salesRecords.findIndex(r => String(r.id) === String(data.id));
+                if (change.type === "added" || change.type === "modified") {
+                    const normData = { ...data, customer: normalizeCustomerName(data.customer) };
+                    if (idx === -1) { salesRecords.unshift(normData); changed = true; }
+                    else { salesRecords[idx] = normData; changed = true; }
+                } else if (change.type === "removed") {
+                    if (idx !== -1) { salesRecords.splice(idx, 1); changed = true; }
+                }
+            });
+            if (changed) {
+                salesRecords.sort((a, b) => b.id - a.id);
+                localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+                renderSalesTable();
+            }
+        });
+
+        // 2. المبيعات الخارجية
+        db.collection("external_sales").onSnapshot((snapshot) => {
+            let changed = false;
+            snapshot.docChanges().forEach((change) => {
+                const data = change.doc.data();
+                const idx = externalRecords.findIndex(r => String(r.id) === String(data.id));
+                if (change.type === "added" || change.type === "modified") {
+                    if (idx === -1) { externalRecords.unshift(data); changed = true; }
+                    else { externalRecords[idx] = data; changed = true; }
+                } else if (change.type === "removed") {
+                    if (idx !== -1) { externalRecords.splice(idx, 1); changed = true; }
+                }
+            });
+            if (changed) {
+                externalRecords.sort((a, b) => b.id - a.id);
+                localStorage.setItem('fondant_external_sales_records', JSON.stringify(externalRecords));
+                renderExternalTable();
+            }
+        });
+
+        // 3. طلبات
+        db.collection("talabat_sales").onSnapshot((snapshot) => {
+            let changed = false;
+            snapshot.docChanges().forEach((change) => {
+                const data = change.doc.data();
+                const idx = talabatRecords.findIndex(r => String(r.id) === String(data.id));
+                if (change.type === "added" || change.type === "modified") {
+                    if (idx === -1) { talabatRecords.unshift(data); changed = true; }
+                    else { talabatRecords[idx] = data; changed = true; }
+                } else if (change.type === "removed") {
+                    if (idx !== -1) { talabatRecords.splice(idx, 1); changed = true; }
+                }
+            });
+            if (changed) {
+                localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
+                renderTalabatTable();
+            }
+        });
+
+        // 4. كيتا
+        db.collection("keeta_sales").onSnapshot((snapshot) => {
+            let changed = false;
+            snapshot.docChanges().forEach((change) => {
+                const data = change.doc.data();
+                const idx = keetaRecords.findIndex(r => String(r.id) === String(data.id));
+                if (change.type === "added" || change.type === "modified") {
+                    if (idx === -1) { keetaRecords.unshift(data); changed = true; }
+                    else { keetaRecords[idx] = data; changed = true; }
+                } else if (change.type === "removed") {
+                    if (idx !== -1) { keetaRecords.splice(idx, 1); changed = true; }
+                }
+            });
+            if (changed) {
+                localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+                renderKeetaTable();
+            }
+        });
+    }
+
+    // تشغيل المزامنة فوراً
+    initCloudListeners();
 
     // ============ Auto PDF Buttons ============
     const TAB_TITLES = {
@@ -762,11 +887,9 @@
         });
     }
 
-    // ✅ تصدير التبويبات (مستشفيات/خارجية/طلبات/كيتا) - رأسي + تقسيم 20 صف/صفحة + رأس متكرر
     function exportTabToPDF(tabId) {
         const tab = document.getElementById(tabId);
         if (!tab) return;
-
         const table = tab.querySelector('.sales-table');
         if (!table) { alert('لا يوجد جدول للتصدير.'); return; }
         const thead = table.querySelector('thead');
@@ -845,7 +968,6 @@
         setTimeout(() => { if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper); }, 15000);
     }
 
-    // ============ Tab Switching ============
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -877,7 +999,7 @@
         generateDailyReport();
     }
 
-    // ============ Backup ============
+    // ============ Backup & Sync Restore ============
     function checkBackupReminder() {
         const lastBackup = localStorage.getItem('fondant_last_sales_backup_time'), halfHour = 30 * 60 * 1000;
         document.getElementById('backupReminderBanner').style.display = (!lastBackup || (Date.now() - parseInt(lastBackup)) > halfHour) ? 'flex' : 'none';
@@ -907,10 +1029,12 @@
                 if (data.salesRecords && Array.isArray(data.salesRecords)) {
                     salesRecords = data.salesRecords.map((r, i) => ({ id: r.id || (Date.now() + i), ...r, customer: normalizeCustomerName(r.customer) }));
                     localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+                    salesRecords.forEach(r => syncToCloud('hospital_sales', r));
                 }
                 if (data.externalRecords && Array.isArray(data.externalRecords)) {
                     externalRecords = data.externalRecords.map((r, i) => ({ ...r, id: r.id || (Date.now() + i), description: r.description || '', collector: r.collector || '' }));
                     localStorage.setItem('fondant_external_sales_records', JSON.stringify(externalRecords));
+                    externalRecords.forEach(r => syncToCloud('external_sales', r));
                 }
                 if (data.talabatRecords && Array.isArray(data.talabatRecords)) {
                     talabatRecords = data.talabatRecords.map((r, i) => {
@@ -923,6 +1047,7 @@
                         return rec;
                     });
                     localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
+                    talabatRecords.forEach(r => syncToCloud('talabat_sales', r));
                 }
                 if (data.keetaRecords && Array.isArray(data.keetaRecords)) {
                     keetaRecords = data.keetaRecords.map((r, i) => {
@@ -935,6 +1060,7 @@
                         return rec;
                     });
                     localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+                    keetaRecords.forEach(r => syncToCloud('keeta_sales', r));
                 }
                 if (data.lastDate) localStorage.setItem('fondant_last_sale_date', data.lastDate);
                 if (data.lastExternalDate) localStorage.setItem('fondant_last_external_sale_date', data.lastExternalDate);
@@ -943,8 +1069,8 @@
                 localStorage.setItem('fondant_last_sales_backup_time', Date.now());
                 renderSalesTable(); renderExternalTable(); renderTalabatTable(); renderKeetaTable();
                 setNextInvoiceNumber(); setNextExternalInvoiceNumber(); checkBackupReminder();
-                alert('تمت استعادة النسخة الاحتياطية وإعادة حساب العمولات بنجاح!');
-            } catch (err) { alert('حدث خطأ.'); }
+                alert('تمت استعادة النسخة الاحتياطية ورفعها للسحابة بنجاح!');
+            } catch (err) { alert('حدث خطأ في ملف النسخة الاحتياطية.'); }
             event.target.value = '';
         };
         reader.readAsText(file);
@@ -968,13 +1094,15 @@
                     const returnsRaw = getRowValue(row, ["المرتجع (KD)", "المرتجع", "Returns", "المرتجعات"]);
                     const formattedDate = parseExcelDate(dateRaw), amountVal = parseFloat(amountRaw) || 0, returnsVal = parseFloat(returnsRaw) || 0, customerName = normalizeCustomerName(custVal);
                     if (customerName !== "" || amountVal > 0 || returnsVal > 0) {
-                        salesRecords.push({ id: Date.now() + Math.random() + idx, date: formattedDate, invoiceNo: String(invNoVal).trim() !== "" ? String(invNoVal).trim() : "-", customer: customerName || "-", amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) });
+                        const newRec = { id: Date.now() + Math.random() + idx, date: formattedDate, invoiceNo: String(invNoVal).trim() !== "" ? String(invNoVal).trim() : "-", customer: customerName || "-", amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) };
+                        salesRecords.push(newRec);
+                        syncToCloud('hospital_sales', newRec);
                         addedCount++;
                     }
                 });
                 localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
-                renderSalesTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); alert(`تم استيراد (${addedCount}) سجل بنجاح!`);
-            } catch (err) { alert("حدث خطأ."); }
+                renderSalesTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); alert(`تم استيراد (${addedCount}) سجل ومزامنتها بنجاح!`);
+            } catch (err) { alert("حدث خطأ أثناء قراءة ملف الإكسل."); }
             event.target.value = '';
         };
         reader.readAsArrayBuffer(file);
@@ -998,12 +1126,14 @@
                     const amountRaw = getRowValue(row, ["المبلغ", "المبلغ (KD)", "Amount"]), returnsRaw = getRowValue(row, ["المرتجعات", "المرتجع", "المرتجع (KD)", "Returns"]);
                     const formattedDate = parseExcelDate(dateRaw), amountVal = parseFloat(amountRaw) || 0, returnsVal = parseFloat(returnsRaw) || 0, customerName = String(custVal).trim();
                     if (customerName !== "" || amountVal > 0 || returnsVal > 0) {
-                        externalRecords.push({ id: Date.now() + Math.random() + idx, date: formattedDate, invoiceNo: String(invNoVal).trim() !== "" ? String(invNoVal).trim() : "-", customer: customerName || "-", description: String(descVal).trim(), collector: String(collectorVal).trim() || '', amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) });
+                        const newRec = { id: Date.now() + Math.random() + idx, date: formattedDate, invoiceNo: String(invNoVal).trim() !== "" ? String(invNoVal).trim() : "-", customer: customerName || "-", description: String(descVal).trim(), collector: String(collectorVal).trim() || '', amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) };
+                        externalRecords.push(newRec);
+                        syncToCloud('external_sales', newRec);
                         addedCount++;
                     }
                 });
                 localStorage.setItem('fondant_external_sales_records', JSON.stringify(externalRecords));
-                renderExternalTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); alert(`تم استيراد (${addedCount}) سجل بنجاح!`);
+                renderExternalTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); alert(`تم استيراد (${addedCount}) سجل خارجي ومزامنتها بنجاح!`);
             } catch (err) { alert("حدث خطأ."); }
             event.target.value = '';
         };
@@ -1054,7 +1184,6 @@
     function setNextExternalInvoiceNumber() { if (extEditId !== null) return; document.getElementById('extInvoiceNo').value = getNextInvoiceSerial(); }
     setNextInvoiceNumber(); setNextExternalInvoiceNumber();
 
-    // ============ Live Duplicate Check ============
     function checkOrderNoInput(inputEl, platform, editId) {
         const val = inputEl.value.trim();
         const warningEl = document.getElementById(inputEl.id + 'Warning');
@@ -1244,14 +1373,20 @@
         const amountVal = parseFloat(amountRaw) || 0, returnsVal = parseFloat(returnsRaw) || 0;
         if (amountVal <= 0 && returnsVal <= 0) { alert('أدخل مبلغ أو مرتجع.'); return; }
         localStorage.setItem('fondant_last_sale_date', date);
+
+        let recId = editId !== null ? editId : (Date.now() + Math.random());
+        const recordData = { id: recId, date, invoiceNo: invoiceNo !== "" ? invoiceNo : "-", customer, amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) };
+
         if (editId !== null) {
             const idx = salesRecords.findIndex(r => r.id === editId);
-            if (idx !== -1) salesRecords[idx] = { id: editId, date, invoiceNo: invoiceNo !== "" ? invoiceNo : "-", customer, amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) };
+            if (idx !== -1) salesRecords[idx] = recordData;
             editId = null; document.getElementById('submitBtn').innerText = '➕ إضافة'; document.getElementById('submitBtn').className = 'btn btn-primary';
         } else {
-            salesRecords.unshift({ id: Date.now() + Math.random(), date, invoiceNo: invoiceNo !== "" ? invoiceNo : "-", customer, amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) });
+            salesRecords.unshift(recordData);
         }
         localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+        syncToCloud('hospital_sales', recordData);
+
         renderSalesTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber();
         customerInput.value = ''; document.getElementById('saleAmount').value = ''; document.getElementById('returnAmount').value = ''; customerInput.focus();
     }
@@ -1267,7 +1402,9 @@
         if (confirm('هل أنت متأكد من الحذف؟')) {
             const idx = salesRecords.findIndex(r => r.id === id); if (idx !== -1) salesRecords.splice(idx, 1);
             if (editId === id) { editId = null; document.getElementById('submitBtn').innerText = '➕ إضافة'; document.getElementById('submitBtn').className = 'btn btn-primary'; }
-            localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords)); renderSalesTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); customerInput.focus();
+            localStorage.setItem('fondant_sales_records', JSON.stringify(salesRecords));
+            deleteFromCloud('hospital_sales', id);
+            renderSalesTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); customerInput.focus();
         }
     }
 
@@ -1313,14 +1450,20 @@
         const amountVal = parseFloat(amountRaw) || 0, returnsVal = parseFloat(returnsRaw) || 0;
         if (amountVal <= 0 && returnsVal <= 0) { alert('أدخل مبلغ أو مرتجع.'); return; }
         localStorage.setItem('fondant_last_external_sale_date', date);
+
+        let recId = extEditId !== null ? extEditId : (Date.now() + Math.random());
+        const recordData = { id: recId, date, invoiceNo: invoiceNo !== "" ? invoiceNo : "-", customer: customerRaw, description, collector, amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) };
+
         if (extEditId !== null) {
             const idx = externalRecords.findIndex(r => r.id === extEditId);
-            if (idx !== -1) externalRecords[idx] = { id: extEditId, date, invoiceNo: invoiceNo !== "" ? invoiceNo : "-", customer: customerRaw, description, collector, amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) };
+            if (idx !== -1) externalRecords[idx] = recordData;
             extEditId = null; document.getElementById('extSubmitBtn').innerText = '➕ إضافة'; document.getElementById('extSubmitBtn').className = 'btn btn-primary ext-submit';
         } else {
-            externalRecords.unshift({ id: Date.now() + Math.random(), date, invoiceNo: invoiceNo !== "" ? invoiceNo : "-", customer: customerRaw, description, collector, amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3) });
+            externalRecords.unshift(recordData);
         }
         localStorage.setItem('fondant_external_sales_records', JSON.stringify(externalRecords));
+        syncToCloud('external_sales', recordData);
+
         renderExternalTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber();
         document.getElementById('extCustomerInput').value = ''; document.getElementById('extSaleAmount').value = ''; document.getElementById('extReturnAmount').value = ''; document.getElementById('extDescription').value = ''; document.getElementById('extCollector').value = 'العهدة'; document.getElementById('extCustomerInput').focus();
     }
@@ -1337,7 +1480,9 @@
         if (confirm('هل أنت متأكد من الحذف؟')) {
             const idx = externalRecords.findIndex(r => r.id === id); if (idx !== -1) externalRecords.splice(idx, 1);
             if (extEditId === id) { extEditId = null; document.getElementById('extSubmitBtn').innerText = '➕ إضافة'; document.getElementById('extSubmitBtn').className = 'btn btn-primary ext-submit'; }
-            localStorage.setItem('fondant_external_sales_records', JSON.stringify(externalRecords)); renderExternalTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); document.getElementById('extCustomerInput').focus();
+            localStorage.setItem('fondant_external_sales_records', JSON.stringify(externalRecords));
+            deleteFromCloud('external_sales', id);
+            renderExternalTable(); setNextInvoiceNumber(); setNextExternalInvoiceNumber(); document.getElementById('extCustomerInput').focus();
         }
     }
 
@@ -1395,7 +1540,10 @@
         if (amountVal <= 0 && returnsVal <= 0) { alert('أدخل مبلغ أو مرتجع.'); return; }
         const calc = calculateCommission(amountVal, returnsVal, paymentMethod, 'talabat');
         localStorage.setItem('fondant_last_talabat_date', date);
+
+        let recId = talabatEditId !== null ? talabatEditId : (Date.now() + Math.random());
         const newRecord = {
+            id: recId,
             date, orderNo: orderNo !== "" ? orderNo : "-",
             amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3),
             paymentMethod,
@@ -1404,14 +1552,17 @@
             commission: calc.total.toFixed(3),
             netAfterCommission: calc.net.toFixed(3)
         };
+
         if (talabatEditId !== null) {
             const idx = talabatRecords.findIndex(r => r.id === talabatEditId);
-            if (idx !== -1) talabatRecords[idx] = { id: talabatEditId, ...newRecord };
+            if (idx !== -1) talabatRecords[idx] = newRecord;
             talabatEditId = null; document.getElementById('talabatSubmitBtn').innerText = '➕ إضافة'; document.getElementById('talabatSubmitBtn').className = 'btn btn-primary';
         } else {
-            talabatRecords.unshift({ id: Date.now() + Math.random(), ...newRecord });
+            talabatRecords.unshift(newRecord);
         }
         localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
+        syncToCloud('talabat_sales', newRecord);
+
         renderTalabatTable();
         document.getElementById('talabatAmount').value = ''; document.getElementById('talabatReturn').value = ''; document.getElementById('talabatPayment').value = '';
         clearOrderNoWarning('talabatOrderNo');
@@ -1433,7 +1584,9 @@
         if (confirm('هل أنت متأكد من الحذف؟')) {
             const idx = talabatRecords.findIndex(r => r.id === id); if (idx !== -1) talabatRecords.splice(idx, 1);
             if (talabatEditId === id) { talabatEditId = null; document.getElementById('talabatSubmitBtn').innerText = '➕ إضافة'; document.getElementById('talabatSubmitBtn').className = 'btn btn-primary'; }
-            localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords)); renderTalabatTable();
+            localStorage.setItem('fondant_talabat_records', JSON.stringify(talabatRecords));
+            deleteFromCloud('talabat_sales', id);
+            renderTalabatTable();
         }
     }
 
@@ -1503,7 +1656,10 @@
         if (amountVal <= 0 && returnsVal <= 0) { alert('أدخل مبلغ أو مرتجع.'); return; }
         const calc = calculateCommission(amountVal, returnsVal, paymentMethod, 'keeta');
         localStorage.setItem('fondant_last_keeta_date', date);
+
+        let recId = keetaEditId !== null ? keetaEditId : (Date.now() + Math.random());
         const newRecord = {
+            id: recId,
             date, orderNo: orderNo !== "" ? orderNo : "-",
             amount: amountVal.toFixed(3), returns: returnsVal.toFixed(3),
             paymentMethod,
@@ -1512,14 +1668,17 @@
             commission: calc.total.toFixed(3),
             netAfterCommission: calc.net.toFixed(3)
         };
+
         if (keetaEditId !== null) {
             const idx = keetaRecords.findIndex(r => r.id === keetaEditId);
-            if (idx !== -1) keetaRecords[idx] = { id: keetaEditId, ...newRecord };
+            if (idx !== -1) keetaRecords[idx] = newRecord;
             keetaEditId = null; document.getElementById('keetaSubmitBtn').innerText = '➕ إضافة'; document.getElementById('keetaSubmitBtn').className = 'btn btn-primary';
         } else {
-            keetaRecords.unshift({ id: Date.now() + Math.random(), ...newRecord });
+            keetaRecords.unshift(newRecord);
         }
         localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+        syncToCloud('keeta_sales', newRecord);
+
         renderKeetaTable();
         document.getElementById('keetaAmount').value = ''; document.getElementById('keetaReturn').value = ''; document.getElementById('keetaPayment').value = '';
         clearOrderNoWarning('keetaOrderNo');
@@ -1541,7 +1700,9 @@
         if (confirm('هل أنت متأكد من الحذف؟')) {
             const idx = keetaRecords.findIndex(r => r.id === id); if (idx !== -1) keetaRecords.splice(idx, 1);
             if (keetaEditId === id) { keetaEditId = null; document.getElementById('keetaSubmitBtn').innerText = '➕ إضافة'; document.getElementById('keetaSubmitBtn').className = 'btn btn-primary'; }
-            localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords)); renderKeetaTable();
+            localStorage.setItem('fondant_keeta_records', JSON.stringify(keetaRecords));
+            deleteFromCloud('keeta_sales', id);
+            renderKeetaTable();
         }
     }
 
@@ -1680,9 +1841,6 @@
         setTimeout(() => { win.print(); win.close(); }, 500);
     }
 
-    // ✅ المحرك الأساسي لتصدير PDF — يدعم العربي النقي + تكرار الرأس + تقسيم صفحات آمن
-    // orientation: 'portrait' (افتراضي) أو 'landscape'
-    // isMatrix: true فقط للمصفوفة (عملاء × أيام) لضبط السلوك الخاص بها
     function generatePdfFromElement(elementId, filename, orientation = 'portrait', isMatrix = false) {
         const originalElement = document.getElementById(elementId);
         if (!originalElement) return;
@@ -1723,7 +1881,6 @@
         doc.open();
         doc.write(`<html dir="rtl" lang="ar"><head><meta charset="UTF-8">${styleHTML}
         <style>
-            /* ✅ إصلاحات عربية شاملة */
             * {
                 font-family: Arial, 'Segoe UI', Tahoma, sans-serif !important;
                 letter-spacing: 0 !important;
@@ -1743,10 +1900,8 @@
                 white-space: normal !important;
                 hyphens: none !important;
             }
-            /* الرؤوس والعناوين لا تنقسم */
             .report-header, .report-title, .report-period { page-break-after: avoid !important; }
             .summary-box { page-break-inside: avoid !important; break-inside: avoid !important; }
-
             ${extraCSS}
             @page { margin: 0; }
         </style></head><body></body></html>`);
@@ -1781,7 +1936,6 @@
             });
         };
 
-        // ✅ انتظار تحميل الخطوط قبل الرسم (إصلاح جذري لمشكلة العربي المتفرق)
         try {
             if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.fonts && iframe.contentWindow.document.fonts.ready) {
                 iframe.contentWindow.document.fonts.ready.then(() => {
@@ -1797,14 +1951,11 @@
         }
     }
 
-    // ✅ تصدير التقرير اليومي — رأسي + تكرار الرأس عبر chunking
     function exportDailyReportPDF() {
         generateDailyReport();
-
         const container = document.getElementById('dailyReportTableContainer');
         const table = container ? container.querySelector('.report-table') : null;
 
-        // لو ما فيه جدول أو ما فيه بيانات → fallback
         if (!table || table.querySelector('td[colspan]')) {
             generatePdfFromElement('dailyReportArea', `FondantChoco_Daily_Report_${new Date().toISOString().split('T')[0]}.pdf`, 'portrait', false);
             return;
@@ -1921,7 +2072,6 @@
         let grandAll = 0;
         customers.forEach(c => { dates.forEach(d => { grandByCust[c] += (map[c] && map[c][d]) ? map[c][d] : 0; }); grandAll += grandByCust[c]; });
 
-        // ✅ CHUNK=10 لضمان احتواء كل الأعمدة في A4 عمودي
         const CHUNK = 10, chunks = [];
         for (let i = 0; i < dates.length; i += CHUNK) chunks.push(dates.slice(i, i + CHUNK));
 
@@ -1973,7 +2123,6 @@
 
     function exportMatrixPDF() {
         generateCustomerMatrixReport();
-        // ✅ portrait + isMatrix=true لضبط CSS الخاص بالمصفوفة
         generatePdfFromElement('matrixReportArea', `FondantChoco_Hospital_Matrix_${new Date().toISOString().split('T')[0]}.pdf`, 'portrait', true);
     }
 
@@ -2068,7 +2217,7 @@
     function printExtStatement() {
         const printContent = document.getElementById('extStatementPrintArea').innerHTML;
         const win = window.open('', '', 'height=700,width=1000');
-        win.document.write('<html dir="rtl" lang="ar"><head><title>كشف حساب المبيعات الخارجية</title><style>@page { size: A4 landscape; margin: 6mm; } body { font-family: "Segoe UI", Arial, sans-serif; direction: rtl; padding: 8px; color: #111; } .ext-st-table { width: 100%; border-collapse: collapse; font-size: 10px; } .ext-st-table th, .ext-st-table td { border: 1px solid #333; padding: 2px 4px; text-align: center; line-height: 1.15; } .ext-st-table th { background: #222; color: #fff; font-weight: bold; padding: 3px 4px; } .ext-st-table tfoot td { background: #e9ecef; font-weight: bold; } .st-header { border-bottom: 2px solid #222; padding-bottom: 6px; margin-bottom: 8px; } .st-company-info > div { display:flex; align-items:center; gap:8px; margin-bottom:2px; } .st-company-info h3 { font-size: 18px; margin:0; font-weight: 800; } .st-company-info p { font-size: 11px; color: #555; } .st-logo-img { max-height: 42px; max-width: 110px; object-fit: contain; } .st-title-section { text-align: center; margin: 6px 0 10px 0; } .st-client-name { font-size: 18px; font-weight: 900; color: #0d47a1; margin-bottom: 2px; } .st-statement-title { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 2px; } .st-period-subtitle { font-size: 11px; font-weight: 600; color: #555; } .st-meta { display: flex; justify-content: space-between; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; font-size: 10px; margin-bottom: 8px; font-weight: bold; border: 1px solid #ddd; } @media print { body { padding: 0; } }</style></head><body>');
+        win.document.write('<html dir="rtl" lang="ar"><head><title>كشف حساب المبيعات الخارجية</title><style>@page { size: A4 landscape; margin: 6mm; } body { font-family: "Segoe UI", Arial, sans-serif; direction: rtl; padding: 8px; color: #111; } .ext-st-table { width: 100%; border-collapse: collapse; font-size: 10px; } .ext-st-table th, .ext-st-table td { border: 1px solid #333; padding: 2px 4px; text-align: center; line-height: 1.15; } .ext-st-table th { background: #222; color: #fff; font-weight: bold; padding: 3px 4px; } .ext-st-table tfoot td { background: #e9ecef; font-weight: bold; } .st-header { border-bottom: 2px solid #222; padding-bottom: 6px; margin-bottom: 8px; } .st-company-info > div { display:flex; align-items:center; gap:8px; margin-bottom:2px; } .st-company-info h3 { font-size: 18px; margin:0; font-weight: 800; } .st-company-info p { font-size: 11px; color: #555; } .st-logo-img { max-height: 42px; max-width: 110px; object-fit: contain; } .st-title-section { text-align: center; margin: 6px 0 10px 0; } .st-client-name { font-size: 18px; font-weight: 900; color: #0d47a1; margin-bottom: 2px; } .st-statement-title { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 2px; } .st-period-subtitle { font-size: 11px; font-weight: 600; color: #555; } .st-meta {, display: flex; justify-content: space-between; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; font-size: 10px; margin-bottom: 8px; font-weight: bold; border: 1px solid #ddd; } @media print { body { padding: 0; } }</style></head><body>');
         win.document.write(printContent); win.document.write('</body></html>'); win.document.close(); win.focus();
         setTimeout(() => { win.print(); win.close(); }, 500);
     }

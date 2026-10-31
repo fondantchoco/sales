@@ -2072,7 +2072,7 @@
         let grandAll = 0;
         customers.forEach(c => { dates.forEach(d => { grandByCust[c] += (map[c] && map[c][d]) ? map[c][d] : 0; }); grandAll += grandByCust[c]; });
 
-        const CHUNK = 10, chunks = [];
+        const CHUNK = 16, chunks = [];
         for (let i = 0; i < dates.length; i += CHUNK) chunks.push(dates.slice(i, i + CHUNK));
 
         let html = '';

@@ -2162,7 +2162,7 @@
             let matchDate = true; if (fromDate && r.date < fromDate) matchDate = false; if (toDate && r.date > toDate) matchDate = false;
             let matchCust = true; if (selectedCust !== 'ALL' && r.customer !== selectedCust) matchCust = false;
             return matchDate && matchCust;
-        }).sort((a, b) => new Date(a.date) - new Date(b.date));
+        }).sort((a, b) => (parseInt(a.invoiceNo) || 0) - (parseInt(b.invoiceNo) || 0));
         const tbody = document.getElementById('statementTableBody'); tbody.innerHTML = ''; let sumSalesOnly = 0;
         if (filtered.length === 0) tbody.innerHTML = '<tr><td colspan="5" style="color: #777; padding: 10px;">No invoices registered.</td></tr>';
         else {
